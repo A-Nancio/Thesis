@@ -5,7 +5,7 @@ from cycler import cycler
 
 # _________________________________________ STYLE ____________________________________________________
 
-plt.style.use('dslabs.mplstyle')
+plt.style.use('thesis.mplstyle')
 
 HATCHES = ['.', '..', '...', 'o'] #['/', '+', 'X', '*'] #'oo', 'OO', '..'
 
