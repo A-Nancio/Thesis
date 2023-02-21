@@ -52,18 +52,3 @@ def convert_time(feature_column, format: int):
     cos_projection = feature_column.apply(lambda x: math.cos(x *(2 * math.pi / format)))
 
     return sin_projection, cos_projection
-
-if __name__ == '__main__':
-    print("beginning")
-    #TODO process each dataset
-        #TODO if a dataset contains a timestamp, add the time delta feature between entities
-        # 
-    #dataset_list = json.loads(open('../data/dataset_list.json', "r").read())
-
-    #print(dataset_list)
-
-    #for dataset in dataset_list:
-    #    # process each datasetd
-    #    # Process training and test set
-    #    print(dataset)
-
