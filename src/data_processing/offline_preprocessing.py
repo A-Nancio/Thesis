@@ -3,16 +3,12 @@ import math
 import numpy as np
 from scipy.stats import zscore
 
-#TODO function to have time delta between the last transaction of a given client(card)
-
 def convert_bucket_feat(column: pd.Series):
     """Applies percentile bucketing to a panda Series
     """
     initial_column = column.copy()  #without it the quantiles are wrongly calculated
 
     #NOTE verify if values are placed onto the right buckets
-    #NOTE NEED TO STORE THE QUNATILE VALUES FOR TRANSFORMATION OF TEST DATASET
-    
     lower_quantile = 0
     for upper_quantile in np.arange(0.01, 1.01, 0.01):
         lower_limit = initial_column.quantile(lower_quantile)
@@ -28,7 +24,6 @@ def convert_categorical_feat(column: pd.Series, max_index: int):
     """Converts all possible values of a categorical feature by mapping each
     possible value into a integer based on the number of occurrences
     """
-    #NOTE NEED TO STORE THE VALUE COUNTS FOR TRANSFORMATION OF TEST DATASET
     occurence_list = column.value_counts()
     l = 1
     for index, value in occurence_list.items():
