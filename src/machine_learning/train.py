@@ -1,22 +1,23 @@
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
+
 import numpy as np
 import tensorflow as tf
+import os
 
 from tensorflow import keras
 from keras import layers
-from keras.metrics import AUC, Accuracy, Precision, Recall
-from keras.losses import binary_crossentropy
+from keras import metrics
+from keras.losses import BinaryCrossentropy
 
 import time
 
 from models import Stateless, GlobalState
 
-#TODO ENABLE GRAPH MODE FOR FASTER EXECUTION
-#TODO ENABLE GPU USAGE, AND IF NECESSARY LIMIT IF IT USES ALL OF GPU MEMORY
-
-NUM_FEATURES = 19
+NUM_FEATURES = 18
 CUTOFF_LENGTH = 100
 BATCH_SIZE = 100
-NUM_EPOCHS = 10
+NUM_EPOCHS = 5
 TEST_SIZE = 200000
 
 transactions = np.load('datasets/modified/modified_sparkov.npy')
@@ -38,26 +39,26 @@ val_dataset = val_dataset.batch(BATCH_SIZE)
 del sequences, labels, train_sequences, train_labels, val_sequences, val_labels
 
 
-model = GlobalState(transactions=transactions)
-
+#model = GlobalState(transactions.shape[1])
+model = GlobalState()
 #model.fit(dataset, epochs=3, batch_size=32)
 optimizer = keras.optimizers.Adam()
-loss_fn = keras.losses.BinaryCrossentropy(from_logits=True)
+loss_fn = BinaryCrossentropy(from_logits=True)
 
-train_metrics = (Accuracy(), Precision(), Recall(), AUC())
-val_metrics = (Accuracy(), Precision(), Recall(), AUC())
+val_metrics = (metrics.BinaryAccuracy(), 
+               metrics.TruePositives(), metrics.TrueNegatives(), 
+               metrics.FalsePositives(), metrics.FalseNegatives())
 
-
+@tf.function
 def train_step(x, y):
     with tf.GradientTape() as tape:
         logits = model(x, training=True)
         loss_value = loss_fn(y, logits)
     grads = tape.gradient(loss_value, model.trainable_weights)
     optimizer.apply_gradients(zip(grads, model.trainable_weights))
-    for metric in train_metrics:
-        metric.update_state(y, logits)
     return loss_value
 
+@tf.function
 def test_step(x, y):
     val_logits = model(x, training=False)
     for metric in val_metrics:
@@ -76,22 +77,31 @@ for epoch in range(NUM_EPOCHS):
         x_batch_train = transactions[x_batch_train]
         loss_value = train_step(x_batch_train, y_batch_train)
         #log every 200 batches.
-        print(
-            "Training loss (for one batch) at step %d: %.7f"
-            % (step, float(loss_value)))
-        #if step % 200 == 0:
-        #    
-        #    )
+        if step % 200 == 0:
+            print(
+                "Training loss (for one batch) at step %d: %.7f"
+                % (step, float(loss_value)))
+        if step == 2000:
+            break      
 
     # display metrics at the end of each epoch.
-    print("Metrics over epoch: %.4f Acc, %.4f Precision, %.4f Recall, %.4f AUC" % (float(x.result()) for x in train_metrics))
-    for metric in train_metrics: 
-        metric.reset_states()
+    #results = [float(metric.result()) for metric in train_metrics]
+    #print("Metrics over epoch: " + str(results[0]) + " Acc, " + str(results[1]) + " Precision, " + str(results[2]) +" Recall, "+ str(results[3]) +" AUC")
+    #for metric in train_metrics: 
+    #    metric.reset_states()
     
+    true = 0
+    false = 0
     # Run a validation loop at the end of each epoch.
-    for x_batch_val, y_batch_val in val_dataset:
+    for x_batch_val, y_batch_val in val_dataset: 
+    #    print(1 in y_batch_val)
+    #    if (1 in y_batch_val):
+    #        true +=1
+    #    else: 
+    #        false +=1
+        x_batch_val = transactions[x_batch_val]
         test_step(x_batch_val, y_batch_val)
-    
-    print("Validation acc: %.4f, Precision %.4f, Recall %.4f AUC, %.4f" % (float(x.result()) for x in val_metrics))
-    for metric in val_metrics: metric.reset_states()
+
+    results = [float(metric.result()) for metric in val_metrics]
+    print("Validation acc: " + str(results[0]) + " Acc, " + str(results[1]) + " TP, " + str(results[2]) +" TN, "+ str(results[3]) +" FP, "+ str(results[4]) +" FN")
     print("Time taken: %.2fs" % (time.time() - start_time))
