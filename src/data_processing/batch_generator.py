@@ -2,8 +2,8 @@
 import sys
 import numpy as np
 
-FRAUD_RATIO = 6  # Num of frauds in a batch
-NON_FRAUD_RATIO = 26    # Num of non_frauds in a batch
+FRAUD_RATIO = 16  # Num of frauds in a batch
+NON_FRAUD_RATIO = 16    # Num of non_frauds in a batch
 BATCH_SIZE = FRAUD_RATIO + NON_FRAUD_RATIO
 SEQUENCE_LENGTH = 100
 
@@ -30,7 +30,7 @@ def generate_batches(frauds: np.ndarray, non_frauds: np.ndarray):
     """Generate batchs according to a given ration defined above"""
 
     batch = np.empty(shape=(0, SEQUENCE_LENGTH), dtype=np.int64)
-    dataset = np.empty(shape=(0, SEQUENCE_LENGTH, BATCH_SIZE), dtype=np.int64)
+    dataset = np.empty(shape=(0, BATCH_SIZE, SEQUENCE_LENGTH), dtype=np.int64)
     labels = np.empty(shape=(0, BATCH_SIZE), dtype=np.int64)
     np.random.shuffle(non_frauds)
     np.random.shuffle(frauds)
@@ -47,7 +47,7 @@ def generate_batches(frauds: np.ndarray, non_frauds: np.ndarray):
         num_batches += 1
 
         batch = np.append(non_frauds[0:NON_FRAUD_RATIO],
-                          frauds[0:FRAUD_RATIO], axis=0).T[np.newaxis, :, :]
+                          frauds[0:FRAUD_RATIO], axis=0)[np.newaxis, :, :]
         dataset = np.append(dataset, batch, axis=0)
 
         # Remove sampled transactions
@@ -80,14 +80,3 @@ def convert_ids(batch: np.ndarray, transaction_list: np.ndarray):
     """Convert the IDs of transactions to actual transactions to serve as input
     to the model"""
     return transaction_list[batch]
-
-
-# if __name__ == "__main__":
-#
-#    non_fraud_sequences = np.load('data/modified/sequences/non_fraud_sequences.npy')
-#    fraud_sequences = np.load('data/modified/sequences/fraud_sequences.npy')
-#    transactions = np.load('data/modified/transactions/all_transactions.npy')
-#    transaction_labels = np.load('data/modified/transactions/all_transaction_labels.npy')
-#
-#    dataset, labels = generate_batches(fraud_sequences, non_fraud_sequences)
-#    converted_dataset = convert_ids(dataset, transactions)

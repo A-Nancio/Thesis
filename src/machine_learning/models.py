@@ -34,9 +34,10 @@ class GlobalState(tf.keras.Model):
     def call(self, inputs, training=None, mask=None):
         var = self.dropout(inputs)
         var = self.gru(var)
-        var = concatenate([inputs, var], axis=1)
+        #var = concatenate([inputs, var], axis=1)
         var = self.dense(var)
-        return self.out(var)
+        out = self.out(var)
+        return out
 
 
 # class SharedState(GlobalState):
