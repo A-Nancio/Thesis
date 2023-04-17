@@ -26,7 +26,7 @@ def convert_categorical_feat(column: pd.Series, max_index: int):
     """
     occurence_list = column.value_counts()
     l = 1
-    for index, value in occurence_list.items():
+    for index, _ in occurence_list.items():
         column = column.replace(index, l) # type: ignore
         if l < max_index:
             l = l + 1
