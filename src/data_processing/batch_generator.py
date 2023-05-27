@@ -25,8 +25,7 @@ def load_test_set():
     path = 'data/test'
     dataset = np.load(f'{path}/transactions.npy')
     labels = np.load(f'{path}/all_transaction_labels.npy')
-    return tf.data.Dataset.from_tensor_slices(dataset, labels)
-
+    return tf.data.Dataset.from_tensor_slices(dataset, labels, batch_size=1)
 
 
 SEQUENCE_LENGTH = 100
