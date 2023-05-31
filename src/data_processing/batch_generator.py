@@ -18,7 +18,7 @@ def load_train_set(sequence_length, batch_size):
         seed=None,
         start_index=None,
         end_index=None
-)
+    )
 
 
 def load_test_set():
@@ -64,7 +64,6 @@ def import_training_set(ratio: tuple[int, int]):
         dataset = np.append(dataset, batch, axis=0)
 
         # Remove sampled transactions
-        #frauds = frauds[ratio[1]:]
         non_frauds = non_frauds[ratio[0]:]
 
         # Add labels
@@ -94,5 +93,4 @@ def import_test_set():
     print(
         f"Generated test dataset with shape {dataset.shape} and labels {labels.shape}")
     return dataset, labels, transactions
-    # transaction_labels = np.load(f'{path}/all_transactions_labels.npy')
 
