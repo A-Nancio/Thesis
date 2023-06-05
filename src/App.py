@@ -1,63 +1,34 @@
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
-from data_processing.batch_generator import load_train_set, load_test_set
-from machine_learning.models import Feedzai, BATCH_SIZE, CARD_ID_COLUMN, CATEOGRY_ID_COLUMN
-import tensorflow as tf
-from keras import metrics
+from data_processing.batch_generator import load_train_set, load_test_set, load_pre_data, get_class_weights
+from machine_learning.models import FeedzaiTrain, FeedzaiProduction, BATCH_SIZE
+from machine_learning.pipeline import fit_cycle, compile_model, MAX_EPOCHS
+
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 SEQUENCE_LENGTH = 100
-NUM_EPOCHS = 5
 
-train_model = Feedzai(training_mode=True)
-production_model = Feedzai(training_mode=False)
-
-train_model.compile(loss=tf.keras.losses.BinaryCrossentropy(),
-            optimizer=tf.keras.optimizers.Adam(),
-            metrics=[metrics.BinaryAccuracy(),
-                metrics.TruePositives(), metrics.TrueNegatives(),
-                metrics.FalsePositives(), metrics.FalseNegatives()])
-
-production_model.compile(loss=tf.keras.losses.BinaryCrossentropy(),
-            optimizer=tf.keras.optimizers.Adam(),
-            metrics=[metrics.BinaryAccuracy(),
-                metrics.TruePositives(), metrics.TrueNegatives(),
-                metrics.FalsePositives(), metrics.FalseNegatives()])
-
-total = 1000000
-neg = 800000
-pos = 7506
-
-weight_0 = (1 / neg) * (total / 2.0)
-weight_1 = (1 / pos) * (total / 2.0)
-
-class_weight = {0: weight_0, 1: weight_1}
+train_model = FeedzaiTrain()
+production_model = FeedzaiProduction()
 
 train_set = load_train_set(sequence_length=SEQUENCE_LENGTH, batch_size=BATCH_SIZE)
+pre_test_data = load_pre_data()
 test_set = load_test_set()
-pre_inference_data = np.load(f'data/train/transactions.npy')[-200:,:]   # Last 200 transaction from training to prepare the inference model state
 
-
-results = np.ndarray(shape=(0,0), dtype=float)
-for epoch in range(NUM_EPOCHS):
-    print(f"Epoch {epoch}:")
+for epoch in range(MAX_EPOCHS):
+    print(f"[EPOCH {epoch}]")
+    compile_model(train_model, train_set)
+    compile_model(production_model, test_set)
+    fit_cycle(training_model=train_model, 
+              production_model=production_model,
+              train_dataset=train_set,
+              pre_test_dataset=pre_test_data,
+              test_dataset=test_set,
+              class_weights=get_class_weights()
+              )
     
-    # train the model
-    train_model.fit(train_set, epochs=NUM_EPOCHS, class_weight=class_weight, verbose='auto', shuffle=True)
-
-    #transfer the weights to production model to evaluate
-    production_model.set_weights(train_model.get_weights())
-
-    # Prepare the state of the model
-    print('Preparing state: ')
-    production_model.evaluate(pre_inference_data, batch_size=1)
-
-    # Evaluate the model
-    results = np.append(results, production_model.evaluate(test_set, batch_size=1))
-
-    print(results)
 
 
 #mpl.rcParams['figure.figsize'] = (25, 6)
