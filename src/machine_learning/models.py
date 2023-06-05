@@ -1,12 +1,13 @@
 """Tensorflow model and layer classes"""
 import tensorflow as tf
-from keras.layers import concatenate, Dense, GRU, GRUCell, Dropout, RNN
+from keras.layers import concatenate, Dense, GRUCell, Dropout, Layer, RNN
+from keras import metrics
 
 CARD_ID_COLUMN = 0
-CATEOGRY_ID_COLUMN = ...
-BATCH_SIZE=256
+CATEOGRY_ID_COLUMN = 1
+BATCH_SIZE=128
 
-class SharedStateTrain(GRUCell):
+class SharedStateSync(GRUCell):
     def __init__(self, 
                  units, 
                  id_column,
@@ -28,11 +29,12 @@ class SharedStateTrain(GRUCell):
                  **kwargs):
         
         super().__init__(units, activation, recurrent_activation, use_bias, kernel_initializer, recurrent_initializer, bias_initializer, kernel_regularizer, recurrent_regularizer, bias_regularizer, kernel_constraint, recurrent_constraint, bias_constraint, dropout, recurrent_dropout, reset_after, **kwargs)
-        self.shared_states: tf.Variable = tf.Variable(tf.zeros([1000, BATCH_SIZE, units]))
+        self.num_units: int = units
+        self.shared_states: tf.Variable = tf.Variable(tf.zeros([1000, BATCH_SIZE, self.num_units]))
         self.id_column = id_column
         self.batch_ids = tf.expand_dims(tf.range(BATCH_SIZE), axis=1)
 
-    def call(self, inputs, states, training=None):
+    def call(self, inputs, states=None, training=None):
         """
         tensors should be of size:
         inputs: [batch_size (BATCH_SIZE), num_features (18)]
@@ -47,8 +49,10 @@ class SharedStateTrain(GRUCell):
         self.shared_states.scatter_nd_update(indices, new_states)
         return output, new_states
 
-    
-class SharedStateInference(GRUCell):
+    def reset_states(self):
+        self.shared_states.assign(tf.zeros([1000, BATCH_SIZE, self.num_units]))
+ 
+class SharedStateAsync(GRUCell):
     def __init__(self, 
                  units, 
                  id_column,
@@ -70,16 +74,17 @@ class SharedStateInference(GRUCell):
                  **kwargs):
         
         super().__init__(units, activation, recurrent_activation, use_bias, kernel_initializer, recurrent_initializer, bias_initializer, kernel_regularizer, recurrent_regularizer, bias_regularizer, kernel_constraint, recurrent_constraint, bias_constraint, dropout, recurrent_dropout, reset_after, **kwargs)
-        self.shared_states: tf.Variable = tf.Variable(tf.zeros([1000, units]))
+        self.num_units: int = units
+        self.shared_states: tf.Variable = tf.Variable(tf.zeros([1000, self.num_units]))
         self.id_column = id_column
 
-    def call(self, inputs, states, training=None):
+    def call(self, inputs, states=None, training=None):
         """
         tensors should be of size:
         inputs: [batch_size (BATCH_SIZE), num_features (18)]
         states: [batch_size (BATCH_SIZE, num_units (64))]
         """
-        ids = tf.dtypes.cast(inputs[:, self.id_column], tf.int32) # shape =
+        ids = tf.dtypes.cast(inputs[:, self.id_column], tf.int32)
 
         input_states = tf.gather(self.shared_states, ids)
         output, new_states = super().call(inputs, input_states, training)
@@ -87,15 +92,15 @@ class SharedStateInference(GRUCell):
         self.shared_states.scatter_nd_update(ids, new_states)
         return output, new_states
 
-
-class Feedzai(tf.keras.Model):
-    def __init__(self, training_mode: bool, *args, **kwargs):
+    def reset_states(self):
+        self.shared_states.assign(tf.zeros([1000, self.num_units]))
+#
+# ------- FEEDZAI'S MODEL -------
+#
+class FeedzaiTrain(tf.keras.Model):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if training_mode:
-            self.card_gru = RNN(SharedStateTrain(units=32, id_column=CARD_ID_COLUMN, dropout=0.3, recurrent_regularizer='l2'))
-        else:
-            self.card_gru = SharedStateInference(units=32, id_column=CARD_ID_COLUMN, dropout=0.3, recurrent_regularizer='l2')
-
+        self.card_gru = RNN(SharedStateAsync(units=64, id_column=CARD_ID_COLUMN))    #NOTE change for sync to evaluate
         self.dropout = Dropout(0.2)
         self.dense = Dense(32, activation='relu')
         self.out = Dense(1,  activation="sigmoid")
@@ -108,22 +113,45 @@ class Feedzai(tf.keras.Model):
 
         return out
     
-class DoubleSharedState(tf.keras.Model):
-    def __init__(self, training_mode, *args, **kwargs):
+    def reset_gru(self):
+        self.card_gru.cell.reset_states()   # training model needs to access cell
+
+class FeedzaiProduction(tf.keras.Model):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if training_mode:
-            self.card_gru = RNN(SharedStateTrain(units=32, id_column=CARD_ID_COLUMN, dropout=0.3, recurrent_regularizer='l2'))
-            self.category_gru = RNN(SharedStateTrain(units=32, id_column=CATEOGRY_ID_COLUMN, dropout=0.3, recurrent_regularizer='l2'))
-        else:
-            self.card_gru = SharedStateInference(units=32, id_column=CARD_ID_COLUMN, dropout=0.3, recurrent_regularizer='l2')
-            self.category_gru = SharedStateInference(units=32, id_column=CATEOGRY_ID_COLUMN, dropout=0.3, recurrent_regularizer='l2')
+        self.card_gru = SharedStateAsync(units=64, id_column=CARD_ID_COLUMN)    #NOTE change for sync to evaluate when synchronizing
+        self.dropout = Dropout(0.2)
+        self.dense = Dense(32, activation='relu')
+        self.out = Dense(1,  activation="sigmoid")
+
+    def call(self, inputs, training=None, mask=None):
+        var, _ = self.card_gru(inputs)
+        var = self.dropout(var)
+        var = self.dense(var)
+        out = self.out(var)
+
+        return out
     
+    def reset_gru(self):
+        self.card_gru.reset_states()
+#
+#   ------- DOUBLE SHARED STATE MODELS -------
+#
+class DoubleSharedState(tf.keras.Model):
+    def __init__(self, card_state_layer: Layer, category_state_layer: Layer, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.card_gru = card_state_layer
+        self.category_gru = category_state_layer
+
     def call(self, inputs, training=None, mask=None):
         card_output = self.card_gru(inputs)
         category_output = self.category_gru(inputs)
-        var = concatenate(card_output, category_output, axis=0)  # FIXME verify if axis is correct
+        var = concatenate([card_output, category_output])
         var = self.dropout(var)
         var = self.dense(var)
         out = self.out(var)
         return out
-
+    
+    def reset_gru(self):
+        self.card_gru.reset_states()
+        self.category_gru.reset_states()
