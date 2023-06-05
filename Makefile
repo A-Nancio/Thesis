@@ -14,7 +14,9 @@ install:
 	pip install -r requirements.txt
 
 run:
-	python src/App.py
+	CUDNN_PATH=$(dirname $(python3 -c "import nvidia.cudnn;print(nvidia.cudnn.__file__)"))
+	export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/:$CUDNN_PATH/lib
+	python3 src/App.py
 
 upgrade:
 	pip install --upgrade pip-upgrader
