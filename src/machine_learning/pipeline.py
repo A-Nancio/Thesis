@@ -3,7 +3,9 @@ import tensorflow as tf
 from keras import metrics
 import sys
 
-MAX_EPOCHS=40
+MAX_EPOCHS=3
+metric_names = ['loss', 'binary_accuracy', 'true_positives', 
+                'true_negatives', 'false_positives', 'false_negatives']
 
 def compile_model(model: tf.keras.Model, input: tf.data.Dataset):
   model.compile(loss=tf.keras.losses.BinaryCrossentropy(),
@@ -37,11 +39,11 @@ def fit_cycle(training_model, production_model,
     """ Perform one training and validation cycle """
     training_model.reset_gru()
     sys.stdout.write("\tTrain: ")
-    train_history = training_model.fit(train_dataset, 
+    train_results = list(training_model.fit(train_dataset, 
                         epochs=1, 
                         class_weight=class_weights, 
                         verbose='auto', 
-                        shuffle=True)
+                        shuffle=True).history.values())
     
     
     production_model.set_weights(training_model.get_weights())
@@ -49,9 +51,7 @@ def fit_cycle(training_model, production_model,
     sys.stdout.write("\tLoad state: ")
     production_model.evaluate(pre_test_dataset, batch_size=1)
 
-    sys.stdout.write("\tValidate: ")
-    evaluation_history = production_model.evaluate(test_dataset, batch_size=1)
+    sys.stdout.write("\tTest: ")
+    evaluation_results = production_model.evaluate(test_dataset, batch_size=1)
 
-    return train_history, evaluation_history
-
-  
+    return train_results, evaluation_results
