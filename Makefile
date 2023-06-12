@@ -10,8 +10,11 @@ clean:
 	find . -type d -name __pycache__ | xargs rm -rf
 
 install:
-	pip install --upgrade pip
-	pip install -r requirements.txt
+	pip3 install --user --upgrade pip
+	pip3 install --user
+	pip3 install --user
+	pip3 install --user
+	
 
 run:
 	CUDNN_PATH=$(dirname $(python3 -c "import nvidia.cudnn;print(nvidia.cudnn.__file__)"))
