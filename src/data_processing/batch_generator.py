@@ -8,10 +8,10 @@ SEQUENCE_LENGTH = 100
 
 def load_train_set(sequence_length, batch_size):
     path = 'data/train'
-    transactions = np.load(f'{path}/transactions.npy')[-10*batch_size:]
-    labels = np.load(f'{path}/all_transaction_labels.npy')[-10*batch_size:]
+    transactions = np.load(f'{path}/transactions.npy')[-64:] # For complete dataset, remove the last 64 transactions
+    labels = np.load(f'{path}/all_transaction_labels.npy')[-64:]
 
-    return tf.keras.utils.timeseries_dataset_from_array(
+    dataset = tf.keras.utils.timeseries_dataset_from_array(
         transactions,
         labels,
         sequence_length=sequence_length,
@@ -23,11 +23,13 @@ def load_train_set(sequence_length, batch_size):
         start_index=None,
         end_index=None
     )
+        
+    return dataset
 
 def load_test_set():
     path = 'data/test'
-    dataset = np.load(f'{path}/transactions.npy')[-3000:]
-    labels = np.load(f'{path}/all_transaction_labels.npy')[-3000:]
+    dataset = np.load(f'{path}/transactions.npy')
+    labels = np.load(f'{path}/all_transaction_labels.npy')
 
     return tf.data.Dataset.from_tensor_slices((dataset, labels)).batch(1)   # needs batch size 1 to have all sequential transactions
 

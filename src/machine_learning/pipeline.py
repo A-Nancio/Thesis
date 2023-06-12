@@ -3,7 +3,7 @@ import tensorflow as tf
 from keras import metrics
 import sys
 
-MAX_EPOCHS=3
+MAX_EPOCHS=100
 metric_names = ['loss', 'binary_accuracy', 'true_positives', 
                 'true_negatives', 'false_positives', 'false_negatives']
 
@@ -13,7 +13,7 @@ def compile_model(model: tf.keras.Model, input: tf.data.Dataset):
             metrics=[metrics.BinaryAccuracy(),
                 metrics.TruePositives(), metrics.TrueNegatives(),
                 metrics.FalsePositives(), metrics.FalseNegatives()])
-  
+
   # initialize model weights by providing an initial input
   model(list(input.take(1))[0][0])
 
@@ -33,10 +33,11 @@ def fit_model(model, train_data: tf.data.Dataset, class_weights, model_name):
                         callbacks=[cp_callback])
     return history
 
-def fit_cycle(training_model, production_model, 
+def fit_cycle(training_model: tf.keras.Model, production_model: tf.keras.Model, 
               train_dataset: tf.data.Dataset, pre_test_dataset: tf.data.Dataset, test_dataset: tf.data.Dataset, 
               class_weights: dict):
     """ Perform one training and validation cycle """
+    train_weight_path = f'src/machine_learning/saved_models/{training_model.name}'
     training_model.reset_gru()
     sys.stdout.write("\tTrain: ")
     train_results = list(training_model.fit(train_dataset, 
@@ -45,8 +46,14 @@ def fit_cycle(training_model, production_model,
                         verbose='auto', 
                         shuffle=True).history.values())
     
-    
-    production_model.set_weights(training_model.get_weights())
+
+    # training model weight shape is (1000, 128, 64) but produciton is (1000, 64) #FIXME
+    training_model.save_weights(
+       filepath=train_weight_path,
+       save_format='h5'
+    )
+    #production_model.set_weights(training_model.get_weights())
+    production_model.load_weights(train_weight_path, by_name=True)
     production_model.reset_gru()
     sys.stdout.write("\tLoad state: ")
     production_model.evaluate(pre_test_dataset, batch_size=1)
