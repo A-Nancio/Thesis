@@ -6,7 +6,7 @@ from keras import backend
 
 CARD_ID_COLUMN = 0
 CATEOGRY_ID_COLUMN = 1
-BATCH_SIZE=128
+BATCH_SIZE=1024
 
 class SharedStateSync(GRUCell):
     def __init__(self, 
@@ -103,9 +103,9 @@ class SharedStateAsync(GRUCell):
 class FeedzaiTrainSync(tf.keras.Model):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.card_gru = RNN(SharedStateSync(units=64, id_column=CARD_ID_COLUMN))    #NOTE change for sync to evaluate
+        self.card_gru = RNN(SharedStateSync(units=128, id_column=CARD_ID_COLUMN))    #NOTE change for sync to evaluate
         self.dropout = Dropout(0.2)
-        self.dense = Dense(32, activation='relu')
+        self.dense = Dense(64, activation='relu')
         self.out = Dense(1,  activation="sigmoid")
 
     def call(self, inputs, training=None, mask=None):
@@ -122,9 +122,9 @@ class FeedzaiTrainSync(tf.keras.Model):
 class FeedzaiTrainAsync(tf.keras.Model):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.card_gru = RNN(SharedStateAsync(units=64, id_column=CARD_ID_COLUMN))    #NOTE change for sync to evaluate
+        self.card_gru = RNN(SharedStateAsync(units=128, id_column=CARD_ID_COLUMN))    #NOTE change for sync to evaluate
         self.dropout = Dropout(0.2)
-        self.dense = Dense(32, activation='relu')
+        self.dense = Dense(64, activation='relu')
         self.out = Dense(1,  activation="sigmoid")
 
     def call(self, inputs, training=None, mask=None):
@@ -141,9 +141,9 @@ class FeedzaiTrainAsync(tf.keras.Model):
 class FeedzaiProduction(tf.keras.Model):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.card_gru = SharedStateAsync(units=64, id_column=CARD_ID_COLUMN)    #NOTE change for sync to evaluate when synchronizing
+        self.card_gru = SharedStateAsync(units=128, id_column=CARD_ID_COLUMN)    #NOTE change for sync to evaluate when synchronizing
         self.dropout = Dropout(0.2)
-        self.dense = Dense(32, activation='relu')
+        self.dense = Dense(64, activation='relu')
         self.out = Dense(1,  activation="sigmoid")
 
     def call(self, inputs, training=None, mask=None):
@@ -165,10 +165,10 @@ class FeedzaiProduction(tf.keras.Model):
 class DoubleStateTrainSync(tf.keras.Model):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.card_gru = RNN(SharedStateSync(units=64, id_column=CARD_ID_COLUMN))    #NOTE change for sync to evaluate when synchronizing
-        self.category_gru = RNN(SharedStateSync(units=64, id_column=CARD_ID_COLUMN))
+        self.card_gru = RNN(SharedStateSync(units=128, id_column=CARD_ID_COLUMN))    #NOTE change for sync to evaluate when synchronizing
+        self.category_gru = RNN(SharedStateSync(units=128, id_column=CARD_ID_COLUMN))
         self.dropout = Dropout(0.2)
-        self.dense = Dense(32, activation='relu')
+        self.dense = Dense(64, activation='relu')
         self.out = Dense(1,  activation="sigmoid")
 
     def call(self, inputs, training=None, mask=None):
@@ -187,10 +187,10 @@ class DoubleStateTrainSync(tf.keras.Model):
 class DoubleStateTrainAsync(tf.keras.Model):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.card_gru = RNN(SharedStateAsync(units=64, id_column=CARD_ID_COLUMN))    #NOTE change for sync to evaluate when synchronizing
-        self.category_gru = RNN(SharedStateAsync(units=64, id_column=CARD_ID_COLUMN))
+        self.card_gru = RNN(SharedStateAsync(units=128, id_column=CARD_ID_COLUMN))    #NOTE change for sync to evaluate when synchronizing
+        self.category_gru = RNN(SharedStateAsync(units=128, id_column=CARD_ID_COLUMN))
         self.dropout = Dropout(0.2)
-        self.dense = Dense(32, activation='relu')
+        self.dense = Dense(64, activation='relu')
         self.out = Dense(1,  activation="sigmoid")
 
     def call(self, inputs, training=None, mask=None):
@@ -210,10 +210,10 @@ class DoubleStateTrainAsync(tf.keras.Model):
 class DoubleStateProduction(tf.keras.Model):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.card_gru = SharedStateAsync(units=64, id_column=CARD_ID_COLUMN)    #NOTE change for sync to evaluate when synchronizing
-        self.category_gru = SharedStateAsync(units=64, id_column=CARD_ID_COLUMN)
+        self.card_gru = SharedStateAsync(units=128, id_column=CARD_ID_COLUMN)    #NOTE change for sync to evaluate when synchronizing
+        self.category_gru = SharedStateAsync(units=128, id_column=CARD_ID_COLUMN)
         self.dropout = Dropout(0.2)
-        self.dense = Dense(32, activation='relu')
+        self.dense = Dense(64, activation='relu')
         self.out = Dense(1,  activation="sigmoid")
 
     def call(self, inputs, training=None, mask=None):

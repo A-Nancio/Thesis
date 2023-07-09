@@ -3,7 +3,7 @@ import tensorflow as tf
 from keras import metrics
 import sys
 
-MAX_EPOCHS=100
+MAX_EPOCHS=5
 metric_names = ['loss', 'binary_accuracy', 'true_positives', 
                 'true_negatives', 'false_positives', 'false_negatives']
 
@@ -47,7 +47,6 @@ def fit_cycle(training_model: tf.keras.Model, production_model: tf.keras.Model,
                         shuffle=True).history.values())
     
 
-    # training model weight shape is (1000, 128, 64) but produciton is (1000, 64) #FIXME
     training_model.save_weights(
        filepath=train_weight_path,
        save_format='h5'
