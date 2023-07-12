@@ -5,7 +5,7 @@ import tensorflow as tf
 from machine_learning.models import BATCH_SIZE
 
 SEQUENCE_LENGTH = 100
-path = 'data'
+path = 'src/data'
 def load_train_sample(sample_size: int):
     
     transactions = np.load(f'{path}/train/transactions.npy')[:-sample_size]
@@ -52,15 +52,15 @@ def load_test_set():
 
 def load_pre_data():
     # Last 200 transaction from training to prepare the inference model state
-    pre_inference_data = np.load(f'data/train/transactions.npy')[-200:]   
-    pre_inference_labels = np.load(f'data/train/all_transaction_labels.npy')[-200:]
+    pre_inference_data = np.load(f'{path}/train/transactions.npy')[-200:]   
+    pre_inference_labels = np.load(f'{path}/train/all_transaction_labels.npy')[-200:]
 
     return tf.data.Dataset.from_tensor_slices((pre_inference_data, pre_inference_labels)).batch(1)
 
 def get_class_weights():
     total = 1000000
-    neg = 900000
-    pos = 100000
+    neg = 990000
+    pos = 10000
 
     weight_0 = (1 / neg) * (total / 2.0)
     weight_1 = (1 / pos) * (total / 2.0)
