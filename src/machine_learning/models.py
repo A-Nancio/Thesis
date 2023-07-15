@@ -6,7 +6,7 @@ from keras import backend
 
 CARD_ID_COLUMN = 0
 CATEOGRY_ID_COLUMN = 1
-BATCH_SIZE=1024
+BATCH_SIZE=256
 
 class SharedStateSync(GRUCell):
     def __init__(self, 

@@ -2,7 +2,7 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 from data_processing.batch_generator import load_train_set, load_test_set, load_pre_data, get_class_weights
 from machine_learning.models import DoubleStateTrainAsync, DoubleStateTrainSync, DoubleStateProduction, FeedzaiTrainAsync, FeedzaiTrainSync, FeedzaiProduction, BATCH_SIZE
-from machine_learning.pipeline import fit_cycle, compile_model, MAX_EPOCHS
+from machine_learning.pipeline import fit_cycle, compile_model
 from pandas import DataFrame
 import tensorflow as tf
 
@@ -23,29 +23,32 @@ with tf.device("/gpu:0"):
                 'true_negatives': [], 'false_positives': [], 'false_negatives': []}
 
     val_metrics = {'loss': [], 'binary_accuracy': [], 'true_positives': [], 
-                'true_negatives': [], 'false_positives': [], 'false_negatives': []}
+                'true_negatives': [], 'false_positives': [], 'false_negatives': []} 
 
     compile_model(train_model, train_set)
     compile_model(production_model, test_set)
 
-    for epoch in range(MAX_EPOCHS):
+    for epoch in range(5):
         print(f"[EPOCH {epoch}]")
+        train_weight_path = f'src/machine_learning/saved_models/{train_model.name}_{epoch}'
+        train_model.fit(train_set, 
+                        epochs=1, 
+                        class_weight=get_class_weights(), 
+                        verbose='auto', 
+                        shuffle=True)
 
-        train_results, val_results = fit_cycle(training_model=train_model, 
-                production_model=production_model,
-                train_dataset=train_set,
-                pre_test_dataset=pre_test_data,
-                test_dataset=test_set,
-                class_weights=get_class_weights()
-                )
+        train_model.save_weights(
+            filepath=train_weight_path,
+            save_format='h5'
+        )
         
-        for metric, i in zip(train_metrics.keys(), range(len(train_results))):
-            train_metrics[metric].append(train_results[i][0])
-            val_metrics[metric].append(val_results[i])
+        # for metric, i in zip(train_metrics.keys(), range(len(train_results))):
+        #     train_metrics[metric].append(train_results[i][0])
+        #     val_metrics[metric].append(val_results[i])
 
 
-train_metrics = DataFrame.from_dict(train_metrics)
-val_metrics = DataFrame.from_dict(val_metrics)
-
-train_metrics.to_csv(f"analysis/results/{train_model.name}_results.csv")
-val_metrics.to_csv(f"analysis/results/{production_model.name}_results.csv")
+# train_metrics = DataFrame.from_dict(train_metrics)
+# val_metrics = DataFrame.from_dict(val_metrics)
+# 
+# train_metrics.to_csv(f"analysis/results/{train_model.name}_results.csv")
+# val_metrics.to_csv(f"analysis/results/{production_model.name}_results.csv")
