@@ -36,7 +36,7 @@ def fit_model(model, train_data: tf.data.Dataset, class_weights, model_name):
 def fit_cycle(training_model: tf.keras.Model, production_model: tf.keras.Model, 
               train_dataset: tf.data.Dataset, pre_test_dataset: tf.data.Dataset, test_dataset: tf.data.Dataset, 
               class_weights: dict):
-    """ Perform one training and validation cycle """
+    """ Perform one tra`ining and validation cycle """
     train_weight_path = f'src/machine_learning/saved_models/{training_model.name}'
     training_model.reset_gru()
     sys.stdout.write("\tTrain: ")
