@@ -3,9 +3,12 @@ import sys
 import numpy as np
 import tensorflow as tf
 from machine_learning.models import BATCH_SIZE
+import pandas as pd
 
 SEQUENCE_LENGTH = 100
 path = 'src/data'
+
+
 def load_train_sample(sample_size: int):
     
     transactions = np.load(f'{path}/train/transactions.npy')[:-sample_size]
@@ -23,6 +26,7 @@ def load_train_sample(sample_size: int):
         start_index=None,
         end_index=None
     )
+
 
 def load_train_set(batch_size):
     # For complete dataset to align with batch size, the first 64 elements need to be excluded 
@@ -59,8 +63,8 @@ def load_pre_data():
 
 def get_class_weights():
     total = 1000000
-    neg = 990000
-    pos = 10000
+    neg = 900000
+    pos = 100000
 
     weight_0 = (1 / neg) * (total / 2.0)
     weight_1 = (1 / pos) * (total / 2.0)

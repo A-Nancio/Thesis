@@ -35,9 +35,9 @@ def fit_model(model, train_data: tf.data.Dataset, class_weights, model_name):
 
 def fit_cycle(training_model: tf.keras.Model, production_model: tf.keras.Model, 
               train_dataset: tf.data.Dataset, pre_test_dataset: tf.data.Dataset, test_dataset: tf.data.Dataset, 
-              class_weights: dict):
+              class_weights: dict,
+              weight_path: str):
     """ Perform one tra`ining and validation cycle """
-    train_weight_path = f'src/machine_learning/saved_models/{training_model.name}'
     training_model.reset_gru()
     sys.stdout.write("\tTrain: ")
     train_results = list(training_model.fit(train_dataset, 
@@ -46,13 +46,13 @@ def fit_cycle(training_model: tf.keras.Model, production_model: tf.keras.Model,
                         verbose='auto', 
                         shuffle=True).history.values())
     
-
+    training_model.reset_gru()
     training_model.save_weights(
-       filepath=train_weight_path,
+       filepath=weight_path,
        save_format='h5'
     )
-    #production_model.set_weights(training_model.get_weights())
-    production_model.load_weights(train_weight_path, by_name=True)
+
+    production_model.load_weights(weight_path, by_name=True)
     production_model.reset_gru()
     sys.stdout.write("\tLoad state: ")
     production_model.evaluate(pre_test_dataset, batch_size=1)
