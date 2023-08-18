@@ -12,6 +12,7 @@ __pycache__/
 .Python
 datasets/
 data/
+src/machine_learning/saved_models/
 
 build/
 develop-eggs/

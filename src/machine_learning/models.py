@@ -6,7 +6,7 @@ from keras import backend
 
 CARD_ID_COLUMN = 0
 CATEOGRY_ID_COLUMN = 1
-BATCH_SIZE=4096
+BATCH_SIZE=1024
 
 class SharedStateSync(GRUCell):
     def __init__(self, 
@@ -161,35 +161,7 @@ class FeedzaiProduction(tf.keras.Model):
         self.card_gru.reset_states()
 
 
-#
-#       ------- SIMPLE MODELS
-#
 
-
-    
-class SimpleDouble(tf.keras.Model):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.card_gru = GRU(units=128, dropout=0.1, recurrent_dropout=0.2)
-        self.category_gru = RNN(SharedStateAsync(units=128, dropout=0.1, recurrent_dropout=0.2, id_column=CARD_ID_COLUMN))
-        self.layer = Dense(units=128, activation='relu')
-        self.dropout = Dropout(0.2)
-        self.dense = Dense(64, activation='relu')
-        self.out = Dense(1,  activation="sigmoid")
-
-    def call(self, inputs, training=None, mask=None):
-        card_output = self.card_gru(inputs)
-        category_output = self.category_gru(inputs)
-        var = concatenate([card_output, category_output])
-        var = self.layer(var)
-        var = self.dropout(var)
-        var = self.dense(var)
-        out = self.out(var)
-        return out
-
-    def reset_gru(self):
-        self.card_gru.cell.reset_states()   # training model needs to access cell
-        self.category_gru.cell.reset_states()   # training model needs to access cell
 #
 #   ------- DOUBLE SHARED STATE MODELS -------
 #
