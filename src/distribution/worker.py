@@ -8,7 +8,7 @@ import tensorflow as tf
 import numpy as np
 import keras
 
-from distribution.watcher import PerformanceCallback, CustomCallback
+from distribution.watcher import DistributedPerformance
 
 def worker_function(id):
     database = redis.Redis(host='localhost', port=6379, decode_responses=True)
@@ -44,22 +44,11 @@ def worker_function(id):
 
 
     # ---------- RUN MODEL -------------
+    callback = DistributedPerformance()
+    callback.set_model(model)
+   
     # NOTE Simpler version, implement callbacks to measure metrics
-    results = model.evaluate(dataset) # TODO add callback 
+    results = model.evaluate(dataset, callbacks=callback)
     
     print(f'[WORKER {id}]: {results}')
     
-
-    # NOTE more complex, but it is currently with poor time performance
-    #print("beginning training")
-    #for step, (x, y) in tqdm(enumerate(dataset), total=dataset.cardinality().numpy()):
-    #    y_pred = model(x)
-    #    for metric in model.metrics:
-    #        if metric.name != "loss":
-    #            metric.update_state(y, y_pred)
-
-    #    if step % 10000 == 0:
-    #        print(model.metrics)
-    
-    
-

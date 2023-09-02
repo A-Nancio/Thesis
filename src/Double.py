@@ -57,7 +57,7 @@ train_seq_labels = np.load(f'src/data/train/seq_labels.npy').astype(int)#[0:10]
 train_set = tf.data.Dataset.from_tensor_slices(
     (train_seq_ids, 
      train_seq_labels)
-).batch(4096)
+).batch(16)
 
 sample_transaction = np.load(f'src/data/test/transactions.npy')[0]
 # test_transactions = np.load(f'src/data/test/transactions.npy')
@@ -76,7 +76,6 @@ prototype.compile(loss=tf.keras.losses.BinaryCrossentropy(),
                 metrics.TruePositives(), metrics.TrueNegatives(),
                 metrics.FalsePositives(), metrics.FalseNegatives()])
 
-prototype(np.expand_dims(sample_transaction, axis=0)) # a single forward pass to initialize weights for the model
 
 
 
@@ -104,6 +103,7 @@ for epoch in range(10):
                 )
         print(results)
     
+    prototype(np.expand_dims(sample_transaction, axis=0)) # a single forward pass to initialize weights for the model
     # Assign weights to the stateful layers
     prototype.card_gru.weights[1].assign(train_model.card_gru.weights[0])
     prototype.card_gru.weights[2].assign(train_model.card_gru.weights[1])

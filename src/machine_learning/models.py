@@ -77,7 +77,7 @@ class SharedStateAsync(GRUCell):
         
         super().__init__(units, activation, recurrent_activation, use_bias, kernel_initializer, recurrent_initializer, bias_initializer, kernel_regularizer, recurrent_regularizer, bias_regularizer, kernel_constraint, recurrent_constraint, bias_constraint, dropout, recurrent_dropout, reset_after, **kwargs)
         self.num_units: int = units
-        self.shared_states: tf.Variable = tf.Variable(tf.zeros([1000, self.num_units]))
+        self.shared_states: tf.Variable = tf.Variable(tf.zeros([1000, self.num_units]), name='shared_state')
         self.id_column = id_column
 
     def call(self, inputs, states=None, training=None):
@@ -88,9 +88,11 @@ class SharedStateAsync(GRUCell):
         """
         ids = tf.dtypes.cast(inputs[:, self.id_column], tf.int32)
         input_states = tf.gather(self.shared_states, ids)
+
         output, new_states = super().call(inputs, input_states, training)
-        
+
         self.shared_states.scatter_nd_update(tf.expand_dims(ids, axis=1), new_states)
+
         return output, new_states
 
 
@@ -149,16 +151,23 @@ class FeedzaiProduction(tf.keras.Model):
         self.out = Dense(1,  activation="sigmoid")
 
     def call(self, inputs, training=None, mask=None):
-        var, _ = self.card_gru(inputs)
+        var, new_states = self.card_gru(inputs)
         var = self.layer(var)
         var = self.dropout(var)
         var = self.dense(var)
         out = self.out(var)
-
+        
         return out
 
     def reset_gru(self):
         self.card_gru.reset_states()
+
+    def get_state(self):
+        return self.card_gru.weights[0].value().numpy()
+    
+    def set_state(self, new_state):
+        self.card_gru.weights[0].assign(new_state)
+        
 
 
 
@@ -235,3 +244,12 @@ class DoubleStateProduction(tf.keras.Model):
     def reset_gru(self):
         self.card_gru.reset_states()
         self.category_gru.reset_states()
+
+    def get_state(self):
+        return (self.card_gru.weights[0].value().numpy(), self.category_gru.weights[0].value().numpy())
+    
+    def set_card_state(self, new_state):
+        self.card_gru.weights[0].assign(new_state)
+
+    def set_category_state(self, new_state):
+        self.category_gru.weights[0].assign(new_state)
