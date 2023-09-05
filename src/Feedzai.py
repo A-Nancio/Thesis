@@ -96,7 +96,7 @@ for epoch in range(10):
                 return_dict=True
             )
     print(results)
-    
+
     # Assign weights to the stateful layers
     prototype.card_gru.weights[1].assign(train_model.card_gru.weights[0])
     prototype.card_gru.weights[2].assign(train_model.card_gru.weights[1])

@@ -4,7 +4,7 @@ import os
 from tqdm import tqdm
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 from data_processing.batch_generator import load_test_set, get_class_weights
-from machine_learning.models import CARD_ID_COLUMN, CATEOGRY_ID_COLUMN, FeedzaiTrainAsync, FeedzaiProduction, BATCH_SIZE, SharedStateAsync
+from machine_learning.models import CARD_ID_COLUMN, CATEOGRY_ID_COLUMN, FeedzaiTrainAsync, FeedzaiProduction, BATCH_SIZE, SharedState
 from data_processing.batch_generator import load_train_set, load_test_set, load_pre_data, get_class_weights
 from machine_learning.models import DoubleStateTrainAsync, DoubleStateTrainSync, DoubleStateProduction, FeedzaiTrainAsync, FeedzaiTrainSync, FeedzaiProduction, BATCH_SIZE
 from machine_learning.pipeline import compile_model
@@ -22,7 +22,7 @@ class SimpleDouble(tf.keras.Model):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.card_gru = GRU(units=128, dropout=0.1, recurrent_dropout=0.2)
-        self.category_gru = RNN(SharedStateAsync(units=128, dropout=0.1, recurrent_dropout=0.2, id_column=CATEOGRY_ID_COLUMN))
+        self.category_gru = RNN(SharedState(units=128, dropout=0.1, recurrent_dropout=0.2, id_column=CATEOGRY_ID_COLUMN))
         self.layer = Dense(units=128, activation='relu')
         self.dropout = Dropout(0.2)
         self.dense = Dense(64, activation='relu')

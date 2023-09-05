@@ -2,7 +2,7 @@
 import sys
 import numpy as np
 import tensorflow as tf
-from machine_learning.models import BATCH_SIZE
+from machine_learning.shared_state import BATCH_SIZE
 import pandas as pd
 
 SEQUENCE_LENGTH = 100
@@ -49,8 +49,8 @@ def load_train_set(batch_size):
     return dataset
 
 def load_test_set():
-    dataset = np.load(f'{path}/test/transactions.npy')[-3000:]
-    labels = np.load(f'{path}/test/all_transaction_labels.npy')[-3000:]
+    dataset = np.load(f'{path}/test/transactions.npy')
+    labels = np.load(f'{path}/test/all_transaction_labels.npy')
 
     return tf.data.Dataset.from_tensor_slices((dataset, labels)).batch(1)   # needs batch size 1 to have all sequential transactions
 

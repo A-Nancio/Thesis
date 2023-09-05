@@ -6,21 +6,12 @@ import tensorflow as tf
 import numpy as np
 
 def execute():
-    datasets = []
-    worker_list = []
-
     worker_0 = multiprocessing.Process(target=worker_function, 
                                        args=(0,))
-    # worker_1 = multiprocessing.Process(target=worker_function, 
+    #worker_1 = multiprocessing.Process(target=worker_function, 
     #                                   args=(1,))
     worker_0.start()
-    # worker_1.start()
+    #worker_1.start()
 
     worker_0.join()
-    # worker_1.join()
-
-    #for worker in worker_list:
-    #    worker.start()
-    #
-    #for worker in worker_list:
-    #    worker.join()
+    #worker_1.join()
