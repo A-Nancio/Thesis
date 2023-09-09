@@ -8,7 +8,6 @@ from keras.layers import concatenate, Dense, GRUCell, Dropout, Layer, RNN, GRU
 import tensorflow as tf
 import numpy as np
 from keras import metrics
-SEQUENCE_LENGTH = 100
 
 
 class Stateless(tf.keras.Model):
@@ -49,7 +48,7 @@ test_set = tf.data.Dataset.from_tensor_slices((dataset, labels)).batch(1024)
 with tf.device("/gpu:0"):
     
     model.fit(train_set,
-                epochs=20, 
+                epochs=10, 
                 verbose='auto', 
                 shuffle=True)
     

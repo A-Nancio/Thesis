@@ -1,8 +1,6 @@
 """Shared state classes"""
 import tensorflow as tf
-from keras.layers import concatenate, Dense, GRUCell, Dropout, Layer, RNN, GRU
-from keras.engine import base_layer_utils
-from keras import backend
+from keras.layers import GRUCell
 import random 
 
 from distribution.db_utils import from_redis, to_redis, add_deltas_to_redis

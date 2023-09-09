@@ -3,12 +3,12 @@ import os
 
 from tqdm import tqdm
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
-from data_processing.batch_generator import load_test_set, get_class_weights
-from machine_learning.models import CARD_ID_COLUMN, CATEOGRY_ID_COLUMN, FeedzaiTrainAsync, FeedzaiProduction, BATCH_SIZE, SharedState
-from data_processing.batch_generator import load_train_set, load_test_set, load_pre_data, get_class_weights
-from machine_learning.models import DoubleStateTrainAsync, DoubleStateTrainSync, DoubleStateProduction, FeedzaiTrainAsync, FeedzaiTrainSync, FeedzaiProduction, BATCH_SIZE
-from machine_learning.pipeline import compile_model
-from keras.layers import concatenate, Dense, GRUCell, Dropout, Layer, RNN, GRU
+from data_processing.batch_generator import load_test_set
+from machine_learning.models import CATEOGRY_ID_COLUMN
+from machine_learning.shared_state import SharedState, BATCH_SIZE
+from data_processing.batch_generator import load_test_set
+from machine_learning.models import DoubleStateProduction
+from keras.layers import concatenate, Dense, Dropout, RNN, GRU
 import tensorflow as tf
 import tensorflow as tf
 import numpy as np
@@ -47,8 +47,6 @@ train_model = SimpleDouble()
 
 prototype = DoubleStateProduction()
 
-
-
 transactions = np.concatenate((np.load(f'src/data/train/transactions.npy'), np.load(f'src/data/test/transactions.npy')), axis=0)
                               
 # BATCHES REDUCED TO 10 FOR SIMPLICITY
@@ -57,7 +55,7 @@ train_seq_labels = np.load(f'src/data/train/seq_labels.npy').astype(int)#[0:10]
 train_set = tf.data.Dataset.from_tensor_slices(
     (train_seq_ids, 
      train_seq_labels)
-).batch(16)
+).batch(BATCH_SIZE)
 
 sample_transaction = np.load(f'src/data/test/transactions.npy')[0]
 # test_transactions = np.load(f'src/data/test/transactions.npy')
@@ -75,6 +73,7 @@ prototype.compile(loss=tf.keras.losses.BinaryCrossentropy(),
             metrics=[metrics.BinaryAccuracy(),
                 metrics.TruePositives(), metrics.TrueNegatives(),
                 metrics.FalsePositives(), metrics.FalseNegatives()])
+prototype(np.expand_dims(sample_transaction, axis=0)) # a single forward pass to initialize weights for the model
 
 
 
@@ -103,7 +102,6 @@ for epoch in range(10):
                 )
         print(results)
     
-    prototype(np.expand_dims(sample_transaction, axis=0)) # a single forward pass to initialize weights for the model
     # Assign weights to the stateful layers
     prototype.card_gru.weights[1].assign(train_model.card_gru.weights[0])
     prototype.card_gru.weights[2].assign(train_model.card_gru.weights[1])
@@ -116,8 +114,9 @@ for epoch in range(10):
     prototype.layer.set_weights(train_model.layer.get_weights())
     prototype.dense.set_weights(train_model.dense.get_weights())
     prototype.out.set_weights(train_model.out.get_weights())
-
-    prototype.evaluate(single_trans_set)
+    prototype.card_gru.reset_states()
+    prototype.category_gru.reset_states()
+    # prototype.evaluate(single_trans_set)
  
     weight_path = f'src/machine_learning/saved_models/Double_{epoch}.keras'
     prototype.save_weights(

@@ -2,7 +2,6 @@
 import sys
 import numpy as np
 import tensorflow as tf
-from machine_learning.shared_state import BATCH_SIZE
 import pandas as pd
 
 SEQUENCE_LENGTH = 100

@@ -3,23 +3,19 @@ import os
 
 from tqdm import tqdm
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
-from data_processing.batch_generator import load_test_set, get_class_weights
-from machine_learning.models import FeedzaiTrainAsync, FeedzaiProduction, BATCH_SIZE
-from data_processing.batch_generator import load_train_set, load_test_set, load_pre_data, get_class_weights
-from machine_learning.models import DoubleStateTrainAsync, DoubleStateTrainSync, DoubleStateProduction, FeedzaiTrainAsync, FeedzaiTrainSync, FeedzaiProduction, BATCH_SIZE
-from machine_learning.pipeline import compile_model
-from keras.layers import concatenate, Dense, GRUCell, Dropout, Layer, RNN, GRU
-import tensorflow as tf
+from data_processing.batch_generator import load_test_set
+from machine_learning.models import FeedzaiProduction
+from machine_learning.shared_state import BATCH_SIZE
+from keras.layers import Dense, Dropout, GRU
 import tensorflow as tf
 import numpy as np
-from keras import metrics
 
 
 SEQUENCE_LENGTH = 100
 
 
 # IT Trains only on sequences which have only on credit card in the sequence
-class SimpleFeedzai(tf.keras.Model):    
+class Feedzaitrain(tf.keras.Model):    
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.card_gru = GRU(units=128)  
@@ -38,7 +34,7 @@ class SimpleFeedzai(tf.keras.Model):
         return out
     
 
-train_model = SimpleFeedzai()
+train_model = Feedzaitrain()
 
 prototype = FeedzaiProduction()
 
@@ -67,9 +63,14 @@ single_trans_set = load_test_set()
 
 prototype.compile(loss=tf.keras.losses.BinaryCrossentropy(),
             optimizer=tf.keras.optimizers.Adam(),
-            metrics=[metrics.BinaryAccuracy(),
-                metrics.TruePositives(), metrics.TrueNegatives(),
-                metrics.FalsePositives(), metrics.FalseNegatives()])
+            metrics=[
+            tf.keras.metrics.BinaryAccuracy(),
+            tf.keras.metrics.TruePositives(), 
+            tf.keras.metrics.TrueNegatives(),
+            tf.keras.metrics.FalsePositives(), 
+            tf.keras.metrics.FalseNegatives(),
+            tf.keras.metrics.Precision(),
+            tf.keras.metrics.Recall()])
 
 prototype(np.expand_dims(sample_transaction, axis=0)) # a single forward pass to initialize weights for the model
 
@@ -77,9 +78,14 @@ prototype(np.expand_dims(sample_transaction, axis=0)) # a single forward pass to
 print(f"----------------- {train_model.name} -----------------")
 train_model.compile(loss=tf.keras.losses.BinaryCrossentropy(),
         optimizer=tf.keras.optimizers.Adam(),
-        metrics=[metrics.BinaryAccuracy(),
-            metrics.TruePositives(), metrics.TrueNegatives(),
-            metrics.FalsePositives(), metrics.FalseNegatives()])
+        metrics=[
+            tf.keras.metrics.BinaryAccuracy(),
+            tf.keras.metrics.TruePositives(), 
+            tf.keras.metrics.TrueNegatives(),
+            tf.keras.metrics.FalsePositives(), 
+            tf.keras.metrics.FalseNegatives(),
+            tf.keras.metrics.Precision(),
+            tf.keras.metrics.Recall()])
 
 
 for epoch in range(10):
@@ -96,7 +102,7 @@ for epoch in range(10):
                 return_dict=True
             )
     print(results)
-
+    prototype.card_gru.reset_states()
     # Assign weights to the stateful layers
     prototype.card_gru.weights[1].assign(train_model.card_gru.weights[0])
     prototype.card_gru.weights[2].assign(train_model.card_gru.weights[1])
@@ -106,10 +112,11 @@ for epoch in range(10):
     prototype.dense.set_weights(train_model.dense.get_weights())
     prototype.out.set_weights(train_model.out.get_weights())
 
-    prototype.evaluate(single_trans_set)
+    
 
+    # results = prototype.evaluate(single_trans_set)
 
-    weight_path = f'src/machine_learning/saved_models/Feedzai_{epoch}.keras'
+    weight_path = f'src/machine_learning/saved_models/feedzai/Feedzai_{epoch}.keras'
     prototype.save_weights(
         filepath=weight_path,
         save_format='h5'
