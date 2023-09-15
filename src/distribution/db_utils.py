@@ -1,6 +1,7 @@
 import redis
 import numpy as np
 import struct
+import json
 
 database = redis.Redis(host='localhost', port=6379)
 NUM_UNITS = 128
@@ -20,11 +21,11 @@ def encode(array: np.ndarray) -> bytes:
 
 def reset_database():
     """Reset database to its base format by reseting the each card information to defautl values"""
-    initial_state = np.zeros((1, NUM_UNITS), dtype=np.float64)
-    for key in range(1000):
-        if key == 288:
-            print("RESETING KEY")
-        to_redis(str(key), initial_state)   # set state initialized
+    database.flushdb()
+
+    # initial_state = np.zeros((1000, NUM_UNITS), dtype=np.float64)
+    # for key in range(1000):
+    #     to_redis(str(key), initial_state)   # set state initialized
 
 
 def from_redis(key):
@@ -39,6 +40,7 @@ def from_redis(key):
 
 def to_redis(key: str, state: np.ndarray):
     """Store given Numpy array 'a' in Redis under key 'n'"""
+    state = state.astype('float64')
     height, width = state.shape
     shape = struct.pack('>II',height,width)
     encoded = shape + state.tobytes()
@@ -70,4 +72,29 @@ def add_deltas_to_redis(key, deltas: np.ndarray):
                 #error_count += 1
 
 
-
+# def event_handler(msg): # pragma: no cover
+#     try:
+#         key = msg["data"].decode("utf-8")
+#         if "valKey" in key:
+#             key = key.replace("valKey:", "")
+#             value = conn.get(key)
+#             # Process message redis subscriber
+#             process_message(value)
+#             # Once we got to know the value we remove it from Redis and do whatever required
+#             conn.delete(key)
+#     except Exception as exp:
+#         pass
+# 
+# def process_notification(value):
+#     # Insert your code below
+#     print("Processing Message : ", value)
+# 
+# 
+# 
+# def subscribe_to_notifications(conn: redis.Redis)
+#     pubsub = conn.pubsub()
+#     # Set Config redis key expire listener
+#     conn.config_set('notify-keyspace-events', 'Ex')
+#     pubsub.psubscribe(**{"__keyevent@0__:expired": event_handler})
+#     pubsub.run_in_thread(sleep_time=0.01)
+#     print(f'Subscribed to database {conn}')

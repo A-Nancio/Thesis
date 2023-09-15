@@ -1,6 +1,8 @@
 import keras
 import time
 
+from distribution.db_utils import add_deltas_to_redis, to_redis
+import sys
 
 class PerformanceTracker(keras.callbacks.Callback):
     def __init__(self):
@@ -26,6 +28,24 @@ class PerformanceTracker(keras.callbacks.Callback):
         throughput = len(self.forward_pass_times) / total_execution_time
 
         return f"Total time: {total_execution_time} s, Average forward pass: {average_forward_pass} s, Throughput: {throughput} s"
+
+
+class StateWriter(keras.callbacks.Callback):
+    def __init__(self, id: int, threshold):
+        super().__init__()
+        self.id = id
+        self.threshold = threshold
+        self.version = 0
+        self.staleness = 0
+    
+    def on_test_batch_end(self, batch, logs=None):
+        self.staleness += 1
+        if self.staleness > self.threshold:
+            #TODO write states
+            self.staleness = 0
+            self.version += 1
+            deltas = self.model.card_gru.deltas.numpy()
+            to_redis(f'{self.id}_v{self.version}', deltas)
 
 
 class Example(keras.callbacks.Callback):
