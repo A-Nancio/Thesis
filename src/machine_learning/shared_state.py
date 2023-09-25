@@ -1,11 +1,8 @@
 """Shared state classes"""
 import tensorflow as tf
 from keras.layers import GRUCell
-import random 
 
-from distribution.db_utils import from_redis, to_redis, add_deltas_to_redis
-
-BATCH_SIZE=1024
+BATCH_SIZE=512  
  
 class SharedState(GRUCell):
     def __init__(self, units, id_column, activation="tanh", recurrent_activation="hard_sigmoid", use_bias=True, kernel_initializer="glorot_uniform", recurrent_initializer="orthogonal", bias_initializer="zeros", kernel_regularizer=None, recurrent_regularizer=None, bias_regularizer=None, kernel_constraint=None, recurrent_constraint=None, bias_constraint=None, dropout=0, recurrent_dropout=0, reset_after=False,**kwargs):

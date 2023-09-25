@@ -19,16 +19,10 @@ class Feedzaitrain(tf.keras.Model):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.card_gru = GRU(units=128)  
-        self.layer = Dense(units=128, activation='relu')
-        self.dropout = Dropout(0.2)
-        self.dense = Dense(64, activation='relu')
         self.out = Dense(1,  activation="sigmoid")
 
     def call(self, inputs, training=None, mask=None):
         var = self.card_gru(inputs)
-        var = self.layer(var)
-        var = self.dropout(var)
-        var = self.dense(var)
         out = self.out(var)
 
         return out

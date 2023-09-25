@@ -3,30 +3,21 @@ import numpy as np
 import struct
 import json
 
+
+
+local_address = "127.0.0.1"
 database = redis.Redis(host='localhost', port=6379)
 NUM_UNITS = 128
 
 # NOTE numpy arrays MUST be in data type float64
 
-def decode(encoded: bytes) -> np.ndarray:
-    height, width = struct.unpack('>II',encoded[:8])
-    # Add slicing here, or else the array would differ from the original
-    return np.frombuffer(encoded[8:]).reshape(height,width)
-
-def encode(array: np.ndarray) -> bytes:
-    height, width = array.shape
-    shape = struct.pack('>II',height,width)
-    return shape + array.tobytes()
-
-
 def reset_database():
     """Reset database to its base format by reseting the each card information to defautl values"""
-    database.flushdb()
+    database.flushall()
 
-    # initial_state = np.zeros((1000, NUM_UNITS), dtype=np.float64)
-    # for key in range(1000):
-    #     to_redis(str(key), initial_state)   # set state initialized
-
+def delete_states():
+    for key in database.keys("delta_*"):
+        database.delete(key)
 
 def from_redis(key):
     """Retrieve Numpy array from Redis key 'n'"""
@@ -46,55 +37,17 @@ def to_redis(key: str, state: np.ndarray):
     encoded = shape + state.tobytes()
 
     # Store encoded data in Redis
-    database.set(key, encoded)
+    database.set(key, encoded, ex=10)
 
 
-def add_deltas_to_redis(key, deltas: np.ndarray):
-    with database.pipeline() as pipe:
-        while True:
-            try:
-                pipe.watch(key)
-                current_value = decode(pipe.get(key))
-                next_value = np.add(current_value, deltas) + 1
-                pipe.multi()
-                
-                height, width = next_value.shape
-                shape = struct.pack('>II',height,width)
-                encoded = shape + next_value.tobytes()
-                pipe.set(key, encoded)
-                
-                pipe.execute()
-                break
-            except redis.WatchError:
-                pass
-                # show which counter is used by another user
-                #print("revoked:", next_value)
-                #error_count += 1
-
-
-# def event_handler(msg): # pragma: no cover
-#     try:
-#         key = msg["data"].decode("utf-8")
-#         if "valKey" in key:
-#             key = key.replace("valKey:", "")
-#             value = conn.get(key)
-#             # Process message redis subscriber
-#             process_message(value)
-#             # Once we got to know the value we remove it from Redis and do whatever required
-#             conn.delete(key)
-#     except Exception as exp:
-#         pass
-# 
-# def process_notification(value):
-#     # Insert your code below
-#     print("Processing Message : ", value)
-# 
-# 
-# 
-# def subscribe_to_notifications(conn: redis.Redis)
-#     pubsub = conn.pubsub()
-#     # Set Config redis key expire listener
-#     conn.config_set('notify-keyspace-events', 'Ex')
-#     pubsub.psubscribe(**{"__keyevent@0__:expired": event_handler})
-#     pubsub.run_in_thread(sleep_time=0.01)
-#     print(f'Subscribed to database {conn}')
+def register_results(thrs, pool_size, performance_results, time_results):
+    loss, acc, _, _, _, _, precision, recall = performance_results
+    #_, _, _, _, precision, recall 
+    total_time, avg_pass, throughput = time_results
+    database.lpush(f"Loss_thres_{thrs}_pool_{pool_size}", loss)
+    database.lpush(f"Acc_thres_{thrs}_pool_{pool_size}", acc)
+    database.lpush(f"Precision_thres_{thrs}_pool_{pool_size}", precision)
+    database.lpush(f"Recall_thres_{thrs}_pool_{pool_size}", recall)
+    database.lpush(f"TotalTime_thres_{thrs}_pool_{pool_size}", total_time)
+    database.lpush(f"AvgPass_thres_{thrs}_pool_{pool_size}", avg_pass)
+    database.lpush(f"Throughput_thres_{thrs}_pool_{pool_size}", throughput)

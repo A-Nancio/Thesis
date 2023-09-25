@@ -23,18 +23,12 @@ class SimpleDouble(tf.keras.Model):
         super().__init__(*args, **kwargs)
         self.card_gru = GRU(units=128, dropout=0.1, recurrent_dropout=0.2)
         self.category_gru = RNN(SharedState(units=128, dropout=0.1, recurrent_dropout=0.2, id_column=CATEOGRY_ID_COLUMN))
-        self.layer = Dense(units=128, activation='relu')
-        self.dropout = Dropout(0.2)
-        self.dense = Dense(64, activation='relu')
         self.out = Dense(1,  activation="sigmoid")
 
     def call(self, inputs, training=None, mask=None):
         card_output = self.card_gru(inputs)
         category_output = self.category_gru(inputs)
         var = concatenate([card_output, category_output])
-        var = self.layer(var)
-        var = self.dropout(var)
-        var = self.dense(var)
         out = self.out(var)
         return out
 
@@ -89,18 +83,18 @@ train_model.compile(loss=tf.keras.losses.BinaryCrossentropy(),
 for epoch in range(10):
     print(f"[EPOCH {epoch}]")
     train_model.reset_metrics()
-    with tf.device("/gpu:0"):
-        for step, (x_batch_train, y_batch_train) in tqdm(enumerate(train_set), total=train_set.cardinality().numpy()):
-            x_batch_train = transactions[x_batch_train]
+    #with tf.device("/gpu:0"):
+    for step, (x_batch_train, y_batch_train) in tqdm(enumerate(train_set), total=train_set.cardinality().numpy()):
+        x_batch_train = transactions[x_batch_train]
 
-            with tf.GradientTape() as tape:
-                results = train_model.train_on_batch(
-                    x_batch_train,
-                    y_batch_train,
-                    reset_metrics=False,
-                    return_dict=True
-                )
-        print(results)
+        with tf.GradientTape() as tape:
+            results = train_model.train_on_batch(
+                x_batch_train,
+                y_batch_train,
+                reset_metrics=False,
+                return_dict=True
+            )
+    print(results)
     
     # Assign weights to the stateful layers
     prototype.card_gru.weights[1].assign(train_model.card_gru.weights[0])
@@ -111,8 +105,6 @@ for epoch in range(10):
     prototype.category_gru.weights[2].assign(train_model.category_gru.weights[2])
     prototype.category_gru.weights[3].assign(train_model.category_gru.weights[3])
 
-    prototype.layer.set_weights(train_model.layer.get_weights())
-    prototype.dense.set_weights(train_model.dense.get_weights())
     prototype.out.set_weights(train_model.out.get_weights())
     prototype.card_gru.reset_states()
     prototype.category_gru.reset_states()
