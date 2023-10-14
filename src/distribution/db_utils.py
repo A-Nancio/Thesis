@@ -41,13 +41,17 @@ def to_redis(key: str, state: np.ndarray):
 
 
 def register_results(thrs, pool_size, performance_results, time_results):
-    loss, acc, _, _, _, _, precision, recall = performance_results
+    loss, acc, TP, TN, FP, FN, precision, recall = performance_results
     #_, _, _, _, precision, recall 
     total_time, avg_pass, throughput = time_results
-    database.lpush(f"Loss_thres_{thrs}_pool_{pool_size}", loss)
-    database.lpush(f"Acc_thres_{thrs}_pool_{pool_size}", acc)
-    database.lpush(f"Precision_thres_{thrs}_pool_{pool_size}", precision)
-    database.lpush(f"Recall_thres_{thrs}_pool_{pool_size}", recall)
-    database.lpush(f"TotalTime_thres_{thrs}_pool_{pool_size}", total_time)
-    database.lpush(f"AvgPass_thres_{thrs}_pool_{pool_size}", avg_pass)
-    database.lpush(f"Throughput_thres_{thrs}_pool_{pool_size}", throughput)
+    database.lpush(f"TEST: Loss_thres_{thrs}_pool_{pool_size}", loss)
+    database.lpush(f"TEST: Acc_thres_{thrs}_pool_{pool_size}", acc)
+    database.lpush(f"TEST: TP_thres_{thrs}_pool_{pool_size}", TP)
+    database.lpush(f"TEST: TN_thres_{thrs}_pool_{pool_size}", TN)
+    database.lpush(f"TEST: FP_thres_{thrs}_pool_{pool_size}", FP)
+    database.lpush(f"TEST: FN_thres_{thrs}_pool_{pool_size}", FN)
+    database.lpush(f"TEST: Precision_thres_{thrs}_pool_{pool_size}", precision)
+    database.lpush(f"TEST: Recall_thres_{thrs}_pool_{pool_size}", recall)
+    database.lpush(f"TEST: TotalTime_thres_{thrs}_pool_{pool_size}", total_time)
+    database.lpush(f"TEST: AvgPass_thres_{thrs}_pool_{pool_size}", avg_pass)
+    database.lpush(f"TEST: Throughput_thres_{thrs}_pool_{pool_size}", throughput)

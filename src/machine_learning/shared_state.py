@@ -2,10 +2,10 @@
 import tensorflow as tf
 from keras.layers import GRUCell
 
-BATCH_SIZE=512  
+BATCH_SIZE=1024  
  
 class SharedState(GRUCell):
-    def __init__(self, units, id_column, activation="tanh", recurrent_activation="hard_sigmoid", use_bias=True, kernel_initializer="glorot_uniform", recurrent_initializer="orthogonal", bias_initializer="zeros", kernel_regularizer=None, recurrent_regularizer=None, bias_regularizer=None, kernel_constraint=None, recurrent_constraint=None, bias_constraint=None, dropout=0, recurrent_dropout=0, reset_after=False,**kwargs):
+    def __init__(self, units, id_column, activation="tanh", recurrent_activation="sigmoid", use_bias=True, kernel_initializer="glorot_uniform", recurrent_initializer="orthogonal", bias_initializer="zeros", kernel_regularizer=None, recurrent_regularizer=None, bias_regularizer=None, kernel_constraint=None, recurrent_constraint=None, bias_constraint=None, dropout=0, recurrent_dropout=0, reset_after=False,**kwargs):
         super().__init__(units, activation, recurrent_activation, use_bias, kernel_initializer, recurrent_initializer, bias_initializer, kernel_regularizer, recurrent_regularizer, bias_regularizer, kernel_constraint, recurrent_constraint, bias_constraint, dropout, recurrent_dropout, reset_after, **kwargs)
         self.shared_states: tf.Variable = tf.Variable(tf.zeros([1000, self.units]), name='shared_state')
         self.id_column = id_column
@@ -30,7 +30,7 @@ class SharedState(GRUCell):
 
 
 class DistributedSharedState(GRUCell):
-    def __init__(self, units, id_column, activation="tanh", recurrent_activation="hard_sigmoid", use_bias=True, kernel_initializer="glorot_uniform", recurrent_initializer="orthogonal", bias_initializer="zeros", kernel_regularizer=None, recurrent_regularizer=None, bias_regularizer=None, kernel_constraint=None, recurrent_constraint=None, bias_constraint=None, dropout=0, recurrent_dropout=0, reset_after=False,**kwargs):
+    def __init__(self, units, id_column, activation="tanh", recurrent_activation="sigmoid", use_bias=True, kernel_initializer="glorot_uniform", recurrent_initializer="orthogonal", bias_initializer="zeros", kernel_regularizer=None, recurrent_regularizer=None, bias_regularizer=None, kernel_constraint=None, recurrent_constraint=None, bias_constraint=None, dropout=0, recurrent_dropout=0, reset_after=False,**kwargs):
         super().__init__(units, activation, recurrent_activation, use_bias, kernel_initializer, recurrent_initializer, bias_initializer, kernel_regularizer, recurrent_regularizer, bias_regularizer, kernel_constraint, recurrent_constraint, bias_constraint, dropout, recurrent_dropout, reset_after, **kwargs)
         self.shared_states: tf.Variable = tf.Variable(tf.zeros([1000, self.units]), name='shared_state')
         self.deltas: tf.Variable = tf.Variable(tf.zeros([1000, self.units]), name='delta')
