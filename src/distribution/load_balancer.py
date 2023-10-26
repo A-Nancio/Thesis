@@ -3,29 +3,26 @@ import multiprocessing
 from distribution.db_utils import delete_states
 from .worker import worker_function
 from multiprocessing import Pool
+from machine_learning.models import DoubleProduction, DoubleConcatProduction, DoubleExtraProduction, DoubleExtraConcatProduction
+from distribution.watcher import SynchronousBoundSum,SynchronousAverage
+
 
 def execute():
     # PARAMETERS FOR EXECUTION
-    threshold_limit = 300000
-    max_workers = 10
+    merge_methods = [SynchronousBoundSum, SynchronousAverage]
+    model_list = [DoubleProduction, DoubleConcatProduction, DoubleExtraProduction, DoubleExtraConcatProduction]
+    threshold_limit = [2, 4, 8, 16, 32, 64, 128, 1]#[1, 2, 4, 8, 16, 32, 64, 128]
+    num_workers = [8, 4, 2]
 
-    # NOTE uncommend for specific configuration
-    # print(f"\n-------\nCONFIGURATION -> num_workers: {1}, threshold: {threshold}\n------\n")
-    # args = [(id, threshold, 1) for id in range(1)]
-    # 
-    # with Pool(1) as p:
-    #     p.starmap(worker_function, args)
-    # 
-    # delete_states()
-    # threshold *= 2
-    for pool_size in range(2, max_workers+1):
-        threshold = 1
-        while threshold < threshold_limit:
-            print(f"\n-------\nCONFIGURATION -> num_workers: {pool_size}, threshold: {threshold}\n------\n")
-            args = [(id, threshold, pool_size) for id in range(pool_size)]
-            
-            with Pool(pool_size) as p:
-                p.starmap(worker_function, args)
+    for merge in merge_methods:
+        for model_type in model_list:
+            for pool_size in num_workers:
+                for threshold in threshold_limit:
+                    delete_states()
+                    print(f"\n-------\nCONFIGURATION -> merge method: {merge.name}, model: {model_type.__name__}, num_workers: {pool_size}, threshold: {threshold}\n------\n")
+                    args = [(id, model_type, merge, threshold, pool_size) for id in range(pool_size)]
+                    
+                    with Pool(pool_size) as p:
+                        p.starmap(worker_function, args)
 
-            threshold *= 2
         

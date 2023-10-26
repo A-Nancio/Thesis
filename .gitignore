@@ -13,7 +13,7 @@ __pycache__/
 datasets/
 data/
 src/machine_learning/saved_models/
-
+src/machine_learning/archive/
 build/
 develop-eggs/
 dist/
