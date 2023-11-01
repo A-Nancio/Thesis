@@ -1,13 +1,13 @@
+from threading import Thread
 import keras
 import time
 import abc
 from redis import StrictRedis
 import queue
-from distribution.db_utils import from_redis, to_redis, database
+from distribution.db_utils import from_redis, to_redis, from_redis_key, to_redis_key, database
 import tensorflow as tf
 import numpy as np
 import sys
-QUEUE_LIMIT = 10
 
 class PerformanceTracker(keras.callbacks.Callback):
     def __init__(self):
@@ -63,22 +63,41 @@ class Asynchronous(keras.callbacks.Callback, abc.ABC):
             self.staleness = 0
             self.version += 1
             self.write_update()
-    
+
+        #if len(self.queue) != 0:
+        #    next_id, next_version = self.queue.pop(0)
+        #    self.read_update(int(next_id), int(next_version[1]))
+
+        # if len(self.queue) != 0:
+        #     if int(self.queue[0][1]) < self.reading_version:
+        #         next_id, next_version = self.queue.pop(0)
+        #         self.read_update(f"delta_{next_id}_{next_version}")
+        #         
+        #     elif int(self.queue[0][1]) == self.reading_version:
+        #         next_id, next_version = self.queue.pop(0)
+# 
+        #         self.read_update(f"delta_{next_id}_{next_version}")
+        #         self.read_count += 1
+# 
+        #         if self.read_count >= self.num_workers / 2:
+        #             self.reading_version += 1
+        #             self.read_count = 0
+
     def subscribe(self, id):    
         def event_handler(msg):
             key = msg["data"].decode("utf-8")
             if "delta_" in key and f'delta_{id}' not in key:
-                self.queue.put(key)
-                self.read_update(self.queue)
+                _, incoming_id, incoming_version = key.split("_")
+                self.queue.put((int(incoming_id), int(incoming_version[1])))
+                self.read_update(*self.queue.get())
 
         redis_server = StrictRedis(host='localhost', port=6379, db=0)
-
         pubsub = redis_server.pubsub()
         pubsub.psubscribe(**{"__keyevent@0__:set": event_handler})
-        thread = pubsub.run_in_thread(sleep_time=.01)
+        subscriber_thread = pubsub.run_in_thread()
 
         print(f"[WORKER {id}]: subscribed")
-        return thread
+        return subscriber_thread
 
     def display_results(self):
         return self.read_time, self.write_time
@@ -92,18 +111,19 @@ class AsynchronousBoundSum(Asynchronous):
         deltas = self.model.category_gru.deltas.numpy()
 
         start_time = time.time()
-        to_redis(f'delta_{self.id}_v{self.version}', deltas)
+        to_redis(self.id, self.version, deltas)
         self.write_time += time.time() - start_time
 
         self.model.category_gru.reset_deltas()
 
-    def read_update(self, key):
+    def read_update(self, worker_id, version):
         start_time = time.time()
-        deltas = from_redis(key)
+        deltas = from_redis(worker_id, version)
         self.read_time += time.time() - start_time
 
         deltas = deltas.astype('float32')
-        new_states = self.model.category_gru.shared_states.numpy() + deltas
+        current_states = self.model.category_gru.shared_states.numpy()
+        new_states = current_states + deltas
         new_states = np.minimum(new_states, 1)
         new_states = np.maximum(new_states, -1)
         
@@ -115,27 +135,25 @@ class AsynchronousAverage(Asynchronous):
         states = self.model.category_gru.shared_states.numpy()
 
         start_time = time.time()
-        to_redis(f'delta_{self.id}_v{self.version}', states)
+        to_redis(self.id, self.version, states)
         self.write_time += time.time() - start_time
 
-    def read_update(self, key):
-        _, _, version = key.split("_")
+    def read_update(self, worker_id, version):
         if version not in self.avg_count:
             self.avg_count[version] = 1
         else:
             self.avg_count[version] += 1
 
         start_time = time.time()
-        states = from_redis(key)
+        incoming_states = from_redis(worker_id, version)
         self.read_time += time.time() - start_time
+        mean_count = self.avg_count[version]
+        current_states = self.model.category_gru.shared_states.numpy()
+        aux1 = np.multiply(current_states, mean_count/(mean_count+1))
+        aux2 = np.divide(incoming_states, mean_count+1)
+        result = aux1 + aux2
 
-        states = states.astype('float32')
-        aux1 = tf.math.multiply(self.model.category_gru.shared_states,
-                                self.avg_count[version]/(self.avg_count[version]+1))
-        aux2 = tf.math.divide(states, self.avg_count[version]+1)
-
-        res = tf.math.add(aux1, aux2)
-        self.model.category_gru.shared_states.assign(res)
+        self.model.category_gru.shared_states.assign(result.astype('float32'))
 
 
 
@@ -170,7 +188,7 @@ class SynchronousAverage(Synchronous):
             sum = self.model.category_gru.shared_states.numpy()
 
             start_time = time.time()
-            to_redis(f'delta_{self.id}_v{self.version}', sum)
+            to_redis(self.id, self.version, sum)
             self.write_time += time.time() - start_time
 
             count = 1      
@@ -179,13 +197,15 @@ class SynchronousAverage(Synchronous):
                     continue
 
                 start_time = time.time()
-                val = from_redis(f'delta_{worker_id}_v{self.version}')
+                val = from_redis(worker_id, self.version)
                 self.read_time +=  time.time() - start_time
+                
                 if val is None:
                     continue
+                
                 sum += val
                 count += 1
-
+            
             self.model.category_gru.shared_states.assign(np.divide(sum, count).astype('float32'))
 
 class SynchronousBoundSum(Synchronous):
@@ -197,23 +217,31 @@ class SynchronousBoundSum(Synchronous):
             self.version += 1
 
             start_time = time.time()
-            to_redis(f'delta_{self.id}_v{self.version}', self.model.category_gru.deltas.numpy())
+            new_states = self.model.category_gru.deltas.numpy()
+            to_redis(self.id, self.version, new_states)
             self.write_time += time.time() - start_time
-            self.model.category_gru.reset_deltas()
 
             for worker_id in range(self.num_workers):
                 if worker_id == self.id:
                     continue
 
                 start_time = time.time()
-                deltas = from_redis(f'delta_{worker_id}_v{self.version}')
+                deltas = from_redis(worker_id, self.version)
                 self.read_time += time.time() - start_time
                 if deltas is None:
                     continue
 
                 deltas = deltas.astype('float32')
-                new_states = self.model.category_gru.shared_states.numpy() + deltas
+                new_states = new_states + deltas
+
                 new_states = np.minimum(new_states, 1)
                 new_states = np.maximum(new_states, -1)
-                
-                self.model.category_gru.shared_states.assign(new_states)
+            
+            self.model.category_gru.shared_states.assign(new_states)
+            self.model.category_gru.reset_deltas()
+
+
+class NoSynchronization(Synchronous):
+    name = "no_synchronization"
+    def on_test_batch_end(self, batch, logs=None):
+        pass    # Do nothing, there is no synchronization

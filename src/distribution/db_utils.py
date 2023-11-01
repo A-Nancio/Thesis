@@ -23,16 +23,12 @@ def delete_states():
         database.delete(key)
 
 
-def from_redis(key):
+def from_redis_key(key):
     """Retrieve Numpy array from Redis key 'n'"""
-    count = 0
     encoded = None
-    while encoded is None:
-        count += 1
-        if count > 1000:
-            return None
-        encoded = database.get(key)
-        
+
+    #while encoded is None:
+    encoded = database.get(key)
 
     height, width = struct.unpack('>II',encoded[:8])
     # Add slicing here, or else the array would differ from the original
@@ -40,7 +36,7 @@ def from_redis(key):
     return array
 
 
-def to_redis(key: str, state: np.ndarray):
+def to_redis_key(key: str, state: np.ndarray):
     """Store given Numpy array 'a' in Redis under key 'n'"""
     state = state.astype('float64')
     height, width = state.shape
@@ -49,24 +45,52 @@ def to_redis(key: str, state: np.ndarray):
 
     # Store encoded data in Redis
     database.set(key, encoded, ex=60)
+# -----------------------
+
+def from_redis(id, version):
+    """Retrieve Numpy array from Redis key 'n'"""
+    encoded = None
+    
+    while encoded is None:
+        last_version = database.get(f'last_version_{id}')
+        if last_version is not None and int(last_version) < version:
+            return None
+        
+        encoded = database.get(f'delta_{id}_v{version}')
+        
+    height, width = struct.unpack('>II',encoded[:8])
+    # Add slicing here, or else the array would differ from the original
+    array = np.frombuffer(encoded[8:]).reshape(height,width)
+    return array
+
+
+def to_redis(id, version, state: np.ndarray):
+    """Store given Numpy array 'a' in Redis under key 'n'"""
+    state = state.astype('float64')
+    height, width = state.shape
+    shape = struct.pack('>II',height,width)
+    encoded = shape + state.tobytes()
+
+    # Store encoded data in Redis
+    database.set(f'delta_{id}_v{version}', encoded, ex=60)
 
 
 def register_results(model, merge, thrs, pool_size, performance_results, time_results, read_time, write_time):
     loss, acc, TP, TN, FP, FN, precision, recall, auc = performance_results
     total_time, avg_pass, throughput = time_results
-    database.lpush(f"{model.name}_{merge.name}: Loss_thres_{thrs}_pool_{pool_size}", loss)
-    database.lpush(f"{model.name}_{merge.name}: Acc_thres_{thrs}_pool_{pool_size}", acc)
-    database.lpush(f"{model.name}_{merge.name}: TP_thres_{thrs}_pool_{pool_size}", TP)
-    database.lpush(f"{model.name}_{merge.name}: TN_thres_{thrs}_pool_{pool_size}", TN)
-    database.lpush(f"{model.name}_{merge.name}: FP_thres_{thrs}_pool_{pool_size}", FP)
-    database.lpush(f"{model.name}_{merge.name}: FN_thres_{thrs}_pool_{pool_size}", FN)
-    database.lpush(f"{model.name}_{merge.name}: Precision_thres_{thrs}_pool_{pool_size}", precision)
-    database.lpush(f"{model.name}_{merge.name}: Recall_thres_{thrs}_pool_{pool_size}", recall)
-    database.lpush(f"{model.name}_{merge.name}: Auc_thres_{thrs}_pool_{pool_size}", auc)
-    database.lpush(f"{model.name}_{merge.name}: TotalTime_thres_{thrs}_pool_{pool_size}", total_time)
-    database.lpush(f"{model.name}_{merge.name}: AvgPass_thres_{thrs}_pool_{pool_size}", avg_pass)
-    database.lpush(f"{model.name}_{merge.name}: Throughput_thres_{thrs}_pool_{pool_size}", throughput)
-    database.lpush(f"{model.name}_{merge.name}: read_time_thres_{thrs}_pool_{pool_size}", read_time)
-    database.lpush(f"{model.name}_{merge.name}: write_time_thres_{thrs}_pool_{pool_size}", write_time)
+    database.lpush(f"v1.3_{model.name}_{merge.name}: Loss_thres_{thrs}_pool_{pool_size}", loss)
+    database.lpush(f"v1.3_{model.name}_{merge.name}: Acc_thres_{thrs}_pool_{pool_size}", acc)
+    database.lpush(f"v1.3_{model.name}_{merge.name}: TP_thres_{thrs}_pool_{pool_size}", TP)
+    database.lpush(f"v1.3_{model.name}_{merge.name}: TN_thres_{thrs}_pool_{pool_size}", TN)
+    database.lpush(f"v1.3_{model.name}_{merge.name}: FP_thres_{thrs}_pool_{pool_size}", FP)
+    database.lpush(f"v1.3_{model.name}_{merge.name}: FN_thres_{thrs}_pool_{pool_size}", FN)
+    database.lpush(f"v1.3_{model.name}_{merge.name}: Precision_thres_{thrs}_pool_{pool_size}", precision)
+    database.lpush(f"v1.3_{model.name}_{merge.name}: Recall_thres_{thrs}_pool_{pool_size}", recall)
+    database.lpush(f"v1.3_{model.name}_{merge.name}: Auc_thres_{thrs}_pool_{pool_size}", auc)
+    database.lpush(f"v1.3_{model.name}_{merge.name}: TotalTime_thres_{thrs}_pool_{pool_size}", total_time)
+    database.lpush(f"v1.3_{model.name}_{merge.name}: AvgPass_thres_{thrs}_pool_{pool_size}", avg_pass)
+    database.lpush(f"v1.3_{model.name}_{merge.name}: Throughput_thres_{thrs}_pool_{pool_size}", throughput)
+    database.lpush(f"v1.3_{model.name}_{merge.name}: read_time_thres_{thrs}_pool_{pool_size}", read_time)
+    database.lpush(f"v1.3_{model.name}_{merge.name}: write_time_thres_{thrs}_pool_{pool_size}", write_time)
 
 

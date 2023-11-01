@@ -16,8 +16,8 @@ class FeedzaiTrain(tf.keras.Model):
         self.out = Dense(1,  activation="sigmoid")
 
     def call(self, inputs, training=None, mask=None):
-        card_out, _ = self.card_gru(inputs)
-        out = self.out(card_out)
+        card_out, card_state = self.card_gru(inputs)
+        out = self.out(card_state)
         return out
 
 class FeedzaiProduction(tf.keras.Model):    
@@ -27,8 +27,8 @@ class FeedzaiProduction(tf.keras.Model):
         self.out = Dense(1,  activation="sigmoid")
 
     def call(self, inputs, training=None, mask=None):
-        card_out, _ = self.card_gru(inputs)
-        out = self.out(card_out)
+        card_out, card_state = self.card_gru(inputs)
+        out = self.out(card_state)
         return out
     
     def reset_gru(self):
@@ -51,8 +51,8 @@ class FeedzaiExtraTrain(tf.keras.Model):
         self.out = Dense(1,  activation="sigmoid")
 
     def call(self, inputs, training=None, mask=None):
-        card_out, _ = self.card_gru(inputs)
-        var = self.dense(card_out)
+        card_out, card_state = self.card_gru(inputs)
+        var = self.dense(card_state)
         out = self.out(var)
         return out
     
@@ -64,8 +64,8 @@ class FeedzaiExtraProduction(tf.keras.Model):
         self.out = Dense(1,  activation="sigmoid")
 
     def call(self, inputs, training=None, mask=None):
-        card_out, _ = self.card_gru(inputs)
-        var = self.dense(card_out)
+        card_out, card_state = self.card_gru(inputs)
+        var = self.dense(card_state)
         out = self.out(var)
         return out
     
@@ -89,8 +89,8 @@ class FeedzaiConcatTrain(tf.keras.Model):
         self.out = Dense(1,  activation="sigmoid")
 
     def call(self, inputs, training=None, mask=None):
-        card_out, _ = self.card_gru(inputs)
-        var = concatenate([inputs[:, -1, :], card_out])
+        card_out, card_state = self.card_gru(inputs)
+        var = concatenate([inputs[:, -1, :], card_state])
         out = self.out(var)
         return out
 
@@ -101,8 +101,8 @@ class FeedzaiConcatProduction(tf.keras.Model):
         self.out = Dense(1,  activation="sigmoid")
 
     def call(self, inputs, training=None, mask=None):
-        card_out, _ = self.card_gru(inputs)
-        var = concatenate([inputs, card_out])
+        card_out, card_state = self.card_gru(inputs)
+        var = concatenate([inputs, card_state])
         out = self.out(var)
         return out
     
@@ -127,8 +127,8 @@ class FeedzaiExtraConcatTrain(tf.keras.Model):
         self.out = Dense(1,  activation="sigmoid")
 
     def call(self, inputs, training=None, mask=None):
-        card_out, _ = self.card_gru(inputs)
-        var = concatenate([inputs[:, -1, :], card_out])
+        card_out, card_state = self.card_gru(inputs)
+        var = concatenate([inputs[:, -1, :], card_state])
         var = self.dense(var)
         out = self.out(var)
         return out
@@ -141,8 +141,8 @@ class FeedzaiExtraConcatProduction(tf.keras.Model):
         self.out = Dense(1,  activation="sigmoid")
 
     def call(self, inputs, training=None, mask=None):
-        card_out, _ = self.card_gru(inputs)
-        var = concatenate([inputs, card_out])
+        card_out, card_state = self.card_gru(inputs)
+        var = concatenate([inputs, card_state])
         var = self.dense(var)
         out = self.out(var)
         return out
@@ -179,10 +179,10 @@ class DoubleTrain(tf.keras.Model):
         self.out = Dense(1,  activation="sigmoid")
 
     def call(self, inputs, training=None, mask=None):
-        card_out, _ = self.card_gru(inputs)
-        category_out, _ = self.category_gru(inputs)
+        card_out, card_state = self.card_gru(inputs)
+        category_out, category_state = self.category_gru(inputs)
         
-        var = concatenate([card_out, category_out])
+        var = concatenate([card_state, category_state])
         out = self.out(var)
         return out
     
@@ -197,9 +197,9 @@ class DoubleProduction(tf.keras.Model):
         self.out = Dense(1,  activation="sigmoid")
 
     def call(self, inputs, training=None, mask=None):
-        card_out, _ = self.card_gru(inputs)
-        category_out, _ = self.category_gru(inputs)
-        var = concatenate([card_out, category_out])
+        card_out, card_state = self.card_gru(inputs)
+        category_out, category_state = self.category_gru(inputs)
+        var = concatenate([card_state, category_state])
         out = self.out(var)
         return out
     
@@ -229,9 +229,9 @@ class DoubleExtraTrain(tf.keras.Model):
         self.out = Dense(1,  activation="sigmoid")
 
     def call(self, inputs, training=None, mask=None):
-        card_out, _ = self.card_gru(inputs)
-        category_out, _ = self.category_gru(inputs)
-        var = concatenate([card_out, category_out])
+        card_out, card_state = self.card_gru(inputs)
+        category_out, category_state = self.category_gru(inputs)
+        var = concatenate([card_state, category_state])
         var = self.dense(var)
         out = self.out(var)
         return out
@@ -248,9 +248,9 @@ class DoubleExtraProduction(tf.keras.Model):
         self.out = Dense(1,  activation="sigmoid")
 
     def call(self, inputs, training=None, mask=None):
-        card_out, _ = self.card_gru(inputs)
-        category_out, _ = self.category_gru(inputs)
-        var = concatenate([card_out, category_out])
+        card_out, card_state = self.card_gru(inputs)
+        category_out, category_state = self.category_gru(inputs)
+        var = concatenate([card_state, category_state])
         var = self.dense(var)
         out = self.out(var)
         return out
@@ -281,9 +281,9 @@ class DoubleConcatTrain(tf.keras.Model):
         self.out = Dense(1,  activation="sigmoid")
 
     def call(self, inputs, training=None, mask=None):
-        card_out, _ = self.card_gru(inputs)
-        category_out, _ = self.category_gru(inputs)
-        var = concatenate([inputs[:, -1, :], card_out, category_out])
+        card_out, card_state = self.card_gru(inputs)
+        category_out, category_state = self.category_gru(inputs)
+        var = concatenate([inputs[:, -1, :], card_state, category_state])
         out = self.out(var)
         return out
     
@@ -298,9 +298,9 @@ class DoubleConcatProduction(tf.keras.Model):
         self.out = Dense(1,  activation="sigmoid")
 
     def call(self, inputs, training=None, mask=None):
-        card_out, _ = self.card_gru(inputs)
-        category_out, _ = self.category_gru(inputs)
-        var = concatenate([inputs, card_out, category_out])
+        card_out, card_state = self.card_gru(inputs)
+        category_out, category_state = self.category_gru(inputs)
+        var = concatenate([inputs, card_state, category_state])
         out = self.out(var)
         return out
     
@@ -331,9 +331,9 @@ class DoubleExtraConcatTrain(tf.keras.Model):
         self.out = Dense(1,  activation="sigmoid")
 
     def call(self, inputs, training=None, mask=None):
-        card_out, _ = self.card_gru(inputs)
-        category_out, _ = self.category_gru(inputs)
-        var = concatenate([inputs[:, -1, :], card_out, category_out])
+        card_out, card_state = self.card_gru(inputs)
+        category_out, category_state = self.category_gru(inputs)
+        var = concatenate([inputs[:, -1, :], card_state, category_state])
         var = self.dense(var)
         out = self.out(var)
         return out
@@ -350,9 +350,9 @@ class DoubleExtraConcatProduction(tf.keras.Model):
         self.out = Dense(1,  activation="sigmoid")
 
     def call(self, inputs, training=None, mask=None):
-        card_out, _ = self.card_gru(inputs)
-        category_out, _ = self.category_gru(inputs)
-        var = concatenate([inputs, card_out, category_out])
+        card_out, card_state = self.card_gru(inputs)
+        category_out, category_state = self.category_gru(inputs)
+        var = concatenate([inputs, card_state, category_state])
         var = self.dense(var)
         out = self.out(var)
         return out

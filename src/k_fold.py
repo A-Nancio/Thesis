@@ -9,7 +9,7 @@ from machine_learning.shared_state import BATCH_SIZE
 import tensorflow as tf
 import numpy as np
 import csv
-tf.random.set_seed(42)
+tf.random.set_seed(1234)
 
 SEQUENCE_LENGTH = 100
 NUM_EPOCHS = 20

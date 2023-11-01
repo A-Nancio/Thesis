@@ -23,10 +23,10 @@ training_set = tf.data.Dataset.from_tensor_slices(
 
 
 model_set = [
-    (FeedzaiTrain, FeedzaiProduction),
-    (FeedzaiExtraTrain, FeedzaiExtraProduction),
-    (FeedzaiConcatTrain, FeedzaiConcatProduction),
-    (FeedzaiExtraConcatTrain, FeedzaiExtraConcatProduction)
+    (DoubleTrain, DoubleProduction),
+    (DoubleExtraTrain, DoubleExtraProduction),
+    (DoubleConcatTrain, DoubleConcatProduction),
+    (DoubleExtraConcatTrain, DoubleExtraConcatProduction)
     ]
 
 for train_model, production_model in model_set:

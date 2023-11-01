@@ -16,18 +16,19 @@ test_set = tf.data.Dataset.from_tensor_slices(
      np.load(f'src/data/test/all_labels.npy').astype(float))
 ).batch(1)
 
-model_list = results = {
-    FeedzaiProduction: 11,
-    FeedzaiExtraProduction: 11,
-    FeedzaiConcatProduction: 10,
-    FeedzaiExtraConcatProduction: 14,
-    DoubleProduction: 19,
-    DoubleExtraProduction: 3,
-    DoubleConcatProduction: 7,
-    DoubleExtraConcatProduction: 17
-}
+model_list = [
+    DoubleExtraConcatProduction
+    #DoubleProduction: 8,
+    #DoubleExtraProduction: 14,
+    #DoubleConcatProduction: 18,
+    #DoubleExtraConcatProduction: 19,
+    #FeedzaiProduction: 15,
+    #FeedzaiExtraProduction: 19,
+    #FeedzaiConcatProduction: 11,
+    #FeedzaiExtraConcatProduction: 17
+]
 
-with open(f'src/training_runs/no_preload_evaluation.csv', 'w') as f:
+with open(f'src/training_runs/preloaded_stateevaluation.csv', 'w') as f:
     writer = csv.writer(f)
     header = ['model', 'loss', 'binary_accuracy','TP', 'TN', 'FP', 'FN','precision', 'recall', 'auc']
     writer.writerow(header)
@@ -49,7 +50,7 @@ with open(f'src/training_runs/no_preload_evaluation.csv', 'w') as f:
         model(np.expand_dims(sample_transaction, axis=0))
         model.load_weights(f'src/machine_learning/saved_models/{model.name}_{epoch}.keras')
         
-        print(f"---------------------- MODEL {model.name} ----------------------")
+        print(f"---------------------- MODEL {model.name} {epoch} ----------------------")
         model.reset_gru()
         results = model.evaluate(test_set)
         writer.writerow([model.name] + results)

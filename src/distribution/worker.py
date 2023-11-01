@@ -20,7 +20,7 @@ def worker_function(id, model_type, merge, threshold, num_workers):
     dataset = tf.data.Dataset.from_tensor_slices((dataset, labels)).batch(1)
 
     # ---------- INITIALIZE MODEL ----------
-    model = model_type()
+    model: tf.keras.Model = model_type()
     model.compile(loss=tf.keras.losses.BinaryCrossentropy(),
                 optimizer=tf.keras.optimizers.Adam(),
                 metrics=[keras.metrics.BinaryAccuracy(),
@@ -39,9 +39,8 @@ def worker_function(id, model_type, merge, threshold, num_workers):
     tracker_callback = PerformanceTracker()
     state_callback.set_model(model)
     
-    ml_results = model.evaluate(dataset, callbacks=[tracker_callback, state_callback])
+    ml_results = model.evaluate(dataset, callbacks=[tracker_callback, state_callback])#, verbose=0)
 
-    print(f"FIRST ONE TO FINISH: {id}, writing {state_callback.version}")
     database.set(f'last_version_{id}', str(state_callback.version))
     state_callback.close_threads()
     
